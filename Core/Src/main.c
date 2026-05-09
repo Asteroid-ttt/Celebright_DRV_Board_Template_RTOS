@@ -154,7 +154,7 @@ int main(void)
 	HAL_Delay(2000);
 	printf("init ok");
 	//Flash初始化
-	QSPI_W25Qxx_Init();	   // 初始化W25Q256
+	//QSPI_W25Qxx_Init();	   // 初始化W25Q256
 //	QSPI_W25Qxx_Test();		// Flash读写测试
 	//setup_roboticArm();//机械臂初始化
 	HAL_Delay(1000);
@@ -287,7 +287,7 @@ void MPU_Config(void)
   MPU_InitStruct.Size = MPU_REGION_SIZE_4GB;
   MPU_InitStruct.SubRegionDisable = 0x87;
   MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;  /* Full access to avoid MPU faults in FreeRTOS critical sections */
+  MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
   MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
   MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;

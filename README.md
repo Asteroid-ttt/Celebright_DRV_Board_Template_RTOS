@@ -24,7 +24,7 @@
 | 项目 | 规格 |
 |------|------|
 | MCU | STM32H750VBT6 (Cortex-M7, 480MHz, LQFP100) |
-| IMU | ICM-45686 9 轴（SPI4） |
+| IMU | ICM-45686 6 轴（SPI4） |
 | Flash | W25Q256 32MB（QSPI BK1, 内存映射 0x90000000） |
 | 电机 | 4 路直流电机 + 编码器 |
 | 舵机 | SCS/FT 串行总线舵机（USART2, 1Mbps） |
@@ -396,7 +396,7 @@ FreeRTOS v10.3.1，CMSIS_V2 API，静态内存分配，1000Hz Tick。
 |------|-----|
 | Heap Size | 81920 bytes |
 | Max Priorities | 56 |
-| FPU / MPU | 关闭 |
+| FPU | 开启 |
 | Mutex / RecursiveMutex / CountingSem | 使能 |
 
 ### 6.4 中断优先级规则
@@ -598,7 +598,43 @@ void CarControl_Handler(void *argument) {
 - **显示抽象层**：`display_service.c/h`，编译时 OLED/LCD 切换
 - **模块裁剪**：`APP_ENABLE_*` 宏开关
 - **全代码英文注释**
-- **Bug 修复**：L1/L2/L3 命名冲突、`angle_limits` static→extern、`holder2D` 头文件保护
+- **Bug 修复**：L1/L2/L3 命名冲突、`angle_limits` static→extern、`holder2D` 头文件保护、**MPU NO_ACCESS→FULL_ACCESS（修复 osKernelStart 后 isb 死锁）**
+
+---
+
+## CubeMX 配置与代码一致性审计 (v3.1)
+
+### 需在 CubeMX 中修改
+
+| 对象 | 当前 CubeMX | 应改为 | 原因 |
+|------|-----------|--------|------|
+| Console 任务优先级 | `osPriorityLow` | `osPriorityNormal1` | 低优先导致 CLI 响应极慢 |
+| USB_DEVICE 初始化任务 | LEDBlink | **"none"** | 避免 `MX_USB_DEVICE_Init()` 阻塞 LED 任务 |
+
+### CubeMX 不支持的对象（代码中手动创建）
+
+| 对象 | 创建方式 | 原因 |
+|------|---------|------|
+| `uart3_frame_queue` | `xQueueCreate(5,64)` in RTOS_QUEUES | CubeMX CMSIS Queue 可选替代，需同步改 uart_fifo API |
+| `uart4_frame_queue` | `xQueueCreate(5,64)` in RTOS_QUEUES | 同上 |
+| `console_rx_stream` | `xStreamBufferCreate(256,1)` in RTOS_QUEUES | CubeMX 不支持 StreamBuffer |
+| `AppInit_Task` | `xTaskCreate(AppInit,512)` in RTOS_THREADS | 自删除一次性任务 |
+
+### CubeMX 中已正确配置的对象
+
+| 对象 | 类型 | 参数 |
+|------|------|------|
+| `queue_key` | CMSIS MessageQueue | 1 × char |
+| `semphr_buzzer_trigger` | Binary Semaphore | initial=1, max=1 |
+| `semphr_uart_receive` | Counting Semaphore | max=16, initial=0 |
+| 12 个 FreeRTOS Tasks | Static Allocation | 各配 stack/priority |
+
+### 可选添加（如需）
+
+| 对象 | 类型 | 用途 |
+|------|------|------|
+| `UsbTxMutex` | CMSIS Mutex | 多任务共用 USB CDC TX 时互斥保护（当前仅 Console 使用 USB，暂无冲突） |
+| `LCDMutex` | CMSIS Mutex | 多任务共用 LCD 时互斥保护（当前仅 SysMon 写屏，暂无冲突） |
 
 ---
 

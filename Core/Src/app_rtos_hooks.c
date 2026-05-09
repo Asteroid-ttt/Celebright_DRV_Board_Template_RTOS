@@ -14,12 +14,12 @@
 /* ========================================================================
  * 运行时统计 — 使用 DWT 周期计数器（已在 delay_init 中启用）
  * ======================================================================== */
-__weak void configureTimerForRunTimeStats(void)
+void configureTimerForRunTimeStats(void)
 {
     /* DWT->CYCCNT 由 delay_init(480) 启用，无需额外配置 */
 }
 
-__weak unsigned long getRunTimeCounterValue(void)
+unsigned long getRunTimeCounterValue(void)
 {
     return DWT->CYCCNT;
 }
