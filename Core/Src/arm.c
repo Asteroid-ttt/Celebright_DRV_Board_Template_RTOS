@@ -11,14 +11,15 @@
  ******************************************************************************
  */
 
+#include "app.h"
+
+#if APP_ENABLE_ROBOTIC_ARM
+
 #include "arm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-
-// 宏定义
-#define true 1
-#define false 0
+#include <stdbool.h>
 // 定义常量
 #define PI (3.14159265358979323846f)
 
@@ -299,3 +300,5 @@ uint8_t _setArmAngle(RoboticArm* arm, const V_Angle* angle) {
 
     return true;
 }
+
+#endif /* APP_ENABLE_ROBOTIC_ARM */

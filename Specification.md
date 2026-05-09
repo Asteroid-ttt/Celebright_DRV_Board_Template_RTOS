@@ -688,22 +688,23 @@ Line 395:     for(;;) {
 Line 396:       HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin); — Toggle LED state
 Line 397:       osDelay(1000);                      — Delay 1 second → 0.5 Hz blink rate
 Line 398:     }
-Line 399-400: #else: osDelay(1);                    — Empty handler (1 tick yield)
+Line 399-400: #else: vTaskDelete(NULL);             — Self-delete disabled task
+
 
 Line 405-421: Broadcast_Handler:
 Line 415:   #if APP_ENABLE_BROADCAST:
               AppBroadcast_Task(argument)            — Delegate to app_device.c
-Line 418:   #else: osDelay(1);                       — Empty handler
+Line 418:   #else: vTaskDelete(NULL);                — Self-delete disabled task
 
 Line 423-439: Uart4Rx_Handler:
 Line 433:   #if APP_ENABLE_UART_FIFO:
               AppUart4Rx_Task(argument)              — Delegate to app_device.c
-Line 436:   #else: osDelay(1);
+Line 436:   #else: vTaskDelete(NULL);
 
 Line 441-457: IMUService_Handler:
 Line 451:   #if APP_ENABLE_IMU:
               AppIMUService_Task(argument)           — Delegate to app_sensor.c
-Line 454:   #else: osDelay(1);
+Line 454:   #else: vTaskDelete(NULL);
 
 Line 459-471: CarControl_Handler:
 Line 469:   AppCarControl_Task(argument)               — Always enabled, delegate to app_control.c
@@ -711,17 +712,17 @@ Line 469:   AppCarControl_Task(argument)               — Always enabled, deleg
 Line 473-489: KeyScan_Handler:
 Line 483:   #if APP_ENABLE_KEYBOARD:
               AppKeyScan_Task(argument)              — Delegate to app_device.c
-Line 486:   #else: osDelay(1);
+Line 486:   #else: vTaskDelete(NULL);
 
 Line 491-507: Buzzer_Handler:
 Line 501:   #if APP_ENABLE_MUSIC:
               AppBuzzer_Task(argument)               — Delegate to app_device.c
-Line 504:   #else: osDelay(1);
+Line 504:   #else: vTaskDelete(NULL);
 
 Line 509-525: Display_Handler:
 Line 519:   #if APP_ENABLE_DISPLAY:
               AppDisplay_Task(argument)              — Delegate to app_device.c
-Line 522:   #else: osDelay(1);
+Line 522:   #else: vTaskDelete(NULL);
 
 Line 527-539: Reserved_Handler:
 Line 537:   AppReserved_Task(argument)                 — Delegate to app_device.c
@@ -729,17 +730,17 @@ Line 537:   AppReserved_Task(argument)                 — Delegate to app_devic
 Line 541-557: Uart3Rx_Handler:
 Line 551:   #if APP_ENABLE_UART_FIFO:
               AppUart3Rx_Task(argument)              — Delegate to app_device.c
-Line 554:   #else: osDelay(1);
+Line 554:   #else: vTaskDelete(NULL);
 
 Line 559-575: SysMon_Handler:
 Line 569:   #if APP_ENABLE_SYSMON:
               AppSysMon_Task(argument)               — Delegate to app_sysmon.c
-Line 572:   #else: osDelay(1);
+Line 572:   #else: vTaskDelete(NULL);
 
 Line 577-593: Console_Handler:
 Line 587:   #if APP_ENABLE_CONSOLE:
               AppConsole_Task(argument)              — Delegate to app_console.c
-Line 590:   #else: osDelay(1);
+Line 590:   #else: vTaskDelete(NULL);
 
 Line 595-599: USER CODE BEGIN Application: (empty)
 ```

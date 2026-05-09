@@ -22,6 +22,9 @@
 #include "stream_buffer.h"
 #include "FreeRTOS_CLI.h"
 #include "usbd_cdc_if.h"
+#include "usbd_cdc.h"
+
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 #define CONSOLE_OUTPUT_MAX_LEN  768U
 #define CONSOLE_PROMPT          "> "
@@ -34,7 +37,6 @@ static void Console_WritePrompt(void);
 static void Console_ProcessLine(char *line);
 static void Console_RegisterCommands(void);
 
-static BaseType_t CLI_HelpCommand(char *buf, size_t len, const char *cmd);
 static BaseType_t CLI_TaskListCommand(char *buf, size_t len, const char *cmd);
 static BaseType_t CLI_RunTimeStatsCommand(char *buf, size_t len, const char *cmd);
 static BaseType_t CLI_SysCommand(char *buf, size_t len, const char *cmd);
@@ -89,7 +91,6 @@ void AppConsole_Task(void *argument)
             else if (rx_idx < (sizeof(line_buf) - 1U) && ch >= 0x20)
             {
                 line_buf[rx_idx++] = (char)ch;
-                CDC_Transmit_FS(&ch, 1);  /* echo */
             }
         }
     }
@@ -97,13 +98,27 @@ void AppConsole_Task(void *argument)
 
 static void Console_Write(const char *str)
 {
-    if (str != NULL)
+    USBD_CDC_HandleTypeDef *hcdc;
+    uint16_t len;
+    volatile int retry;
+
+    if (str == NULL) return;
+    len = (uint16_t)strlen(str);
+    if (len == 0U) return;
+
+    hcdc = (USBD_CDC_HandleTypeDef *)hUsbDeviceFS.pClassData;
+
+    /* Wait for previous USB IN transfer to complete.  CDC_Transmit_FS
+       returns USBD_BUSY if TxState != 0.  The USB TX-complete ISR
+       clears TxState after the host ACKs the packet (~50us). */
+    for (retry = 0; retry < 500000; retry++)
     {
-        uint16_t len = (uint16_t)strlen(str);
-        if (len > 0U)
-        {
-            CDC_Transmit_FS((uint8_t *)str, len);
-        }
+        if (hcdc->TxState == 0) break;
+    }
+
+    if (hcdc->TxState == 0)
+    {
+        (void)CDC_Transmit_FS((uint8_t *)str, len);
     }
 }
 
@@ -114,13 +129,15 @@ static void Console_WritePrompt(void)
 
 static void Console_RegisterCommands(void)
 {
+    /* The built-in "help" command (prvHelpCommand in FreeRTOS_CLI.c) already
+       lists all registered commands and their help strings. Do NOT register a
+       custom "help" — it would conflict with the built-in multi-output iterator. */
     static const CLI_Command_Definition_t cmds[] = {
-        { "help",  "help: Show commands\r\n",              CLI_HelpCommand,          0 },
-        { "tasks", "tasks: Task list\r\n",                 CLI_TaskListCommand,       0 },
-        { "stats", "stats: Runtime stats\r\n",             CLI_RunTimeStatsCommand,   0 },
-        { "sys",   "sys: System summary\r\n",              CLI_SysCommand,            0 },
+        { "tasks", "tasks: List all tasks\r\n",            CLI_TaskListCommand,       0 },
+        { "stats", "stats: Runtime CPU stats\r\n",         CLI_RunTimeStatsCommand,   0 },
+        { "sys",   "sys: System summary (heap/stack)\r\n", CLI_SysCommand,            0 },
         { "flash", "flash [mount|umount|format|ls|cat|info]: QSPI Flash\r\n",  CLI_FlashCommand,  -1 },
-        { "car",   "car <mm> [deg]: Move car (go/spin)\r\n", CLI_CarCommand,          -1 },
+        { "car",   "car [go|spin|arc|stop|start|speed|status]: Car motion control\r\n", CLI_CarCommand, -1 },
     };
 
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++)
@@ -133,35 +150,23 @@ static void Console_RegisterCommands(void)
 static void Console_ProcessLine(char *line)
 {
     char *trimmed = line;
+    BaseType_t xMore;
     while (*trimmed == ' ') trimmed++;
 
     if (trimmed[0] == '\0') return;
 
-    g_cli_output[0] = '\0';
-    FreeRTOS_CLIProcessCommand(trimmed, g_cli_output, sizeof(g_cli_output));
-    Console_Write(g_cli_output);
+    /* FreeRTOS+CLI commands may return pdTRUE to indicate more output
+       follows (e.g. the built-in "help" command iterates through all
+       registered commands one per call). Loop until pdFALSE. */
+    do
+    {
+        g_cli_output[0] = '\0';
+        xMore = FreeRTOS_CLIProcessCommand(trimmed, g_cli_output, sizeof(g_cli_output));
+        Console_Write(g_cli_output);
+    } while (xMore == pdTRUE);
 }
 
 /* ====== CLI Commands ====== */
-
-static BaseType_t CLI_HelpCommand(char *buf, size_t len, const char *cmd)
-{
-    (void)cmd;
-    const char *help =
-        "Commands:\r\n"
-        "  help            Show help\r\n"
-        "  tasks           List all tasks\r\n"
-        "  stats           Run-time CPU stats\r\n"
-        "  sys             System summary (heap, stack)\r\n"
-        "  flash mount     Mount LittleFS on QSPI\r\n"
-        "  flash ls        List flash files\r\n"
-        "  flash info      Flash info\r\n"
-        "  flash format    Format flash (erases all)\r\n"
-        "  car 1000 0      Go straight 1000mm\r\n"
-        "  car 0 180       Spin 180 degrees\r\n";
-    (void)snprintf(buf, len, "%s", help);
-    return pdFALSE;
-}
 
 static BaseType_t CLI_TaskListCommand(char *buf, size_t len, const char *cmd)
 {
@@ -253,20 +258,85 @@ static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd)
 
 static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
 {
-    const char *p1 = FreeRTOS_CLIGetParameter(cmd, 1, NULL);
-    const char *p2 = FreeRTOS_CLIGetParameter(cmd, 2, NULL);
+    const char *sub = FreeRTOS_CLIGetParameter(cmd, 1, NULL);
+    const char *p1  = FreeRTOS_CLIGetParameter(cmd, 2, NULL);
+    const char *p2  = FreeRTOS_CLIGetParameter(cmd, 3, NULL);
+    float v, x, angle;
 
-    if (p1 == NULL)
+    if (sub == NULL || strcmp(sub, "help") == 0)
     {
-        (void)snprintf(buf, len, "Usage: car <mm> [deg]\r\n  car 1000 0   = straight 1m\r\n  car 0 180    = spin 180\r\n");
+        (void)snprintf(buf, len,
+            "car commands:\r\n"
+            "  car go <mm>          Go straight N mm\r\n"
+            "  car spin <deg>        Spin N degrees\r\n"
+            "  car arc <mm> <deg>    Move N mm while turning M deg\r\n"
+            "  car stop              Stop immediately\r\n"
+            "  car start             Resume after stop\r\n"
+            "  car speed <mm/s>      Set raw speed (0 = stop)\r\n"
+            "  car status            Show current state (yaw/speed)\r\n");
         return pdFALSE;
     }
 
-    float x = (float)atof(p1);
-    float angle = (p2 != NULL) ? (float)atof(p2) : 0.0f;
-
-    Set_Car_Control(x, 0, angle);
-    (void)snprintf(buf, len, "Car: x=%.1f mm, angle=%.1f deg\r\n", (double)x, (double)angle);
+    if (strcmp(sub, "stop") == 0)
+    {
+        Set_Car_Control(0, 0, 0);
+        (void)snprintf(buf, len, "Car: stopped.\r\n");
+    }
+    else if (strcmp(sub, "start") == 0)
+    {
+        Set_Car_Start();
+        (void)snprintf(buf, len, "Car: resumed.\r\n");
+    }
+    else if (strcmp(sub, "status") == 0)
+    {
+        (void)snprintf(buf, len,
+            "--- Car Status ---\r\n"
+            "Yaw:   %6.1f deg (total %7.1f, circles %d)\r\n"
+            "V_Lin: %6.1f / %6.1f mm/s  (cur / tgt)\r\n"
+            "V_Ang: %6.1f / %6.1f deg/s (cur / tgt)\r\n"
+            "Stop:  %s\r\n",
+            (double)car_state.yaw, (double)car_state.yaw_all, car_state.yaw_circles,
+            (double)car_state.v_line, (double)car_state.v_line_target,
+            (double)car_state.v_angle, (double)car_state.v_angle_target,
+            car_state.flag_stop ? "YES" : "NO");
+    }
+    else if (strcmp(sub, "speed") == 0)
+    {
+        if (p1 == NULL)
+        { (void)snprintf(buf, len, "Usage: car speed <mm/s>\r\n"); return pdFALSE; }
+        v = (float)atof(p1);
+        Set_Car_Attitude(v, 0);
+        (void)snprintf(buf, len, "Car speed: %.1f mm/s\r\n", (double)v);
+    }
+    else if (strcmp(sub, "go") == 0)
+    {
+        if (p1 == NULL)
+        { (void)snprintf(buf, len, "Usage: car go <mm>\r\n"); return pdFALSE; }
+        x = (float)atof(p1);
+        Set_Car_Control(x, 0, 0);
+        (void)snprintf(buf, len, "Car: go %.1f mm\r\n", (double)x);
+    }
+    else if (strcmp(sub, "spin") == 0)
+    {
+        if (p1 == NULL)
+        { (void)snprintf(buf, len, "Usage: car spin <deg>\r\n"); return pdFALSE; }
+        angle = (float)atof(p1);
+        Set_Car_Control(0, 0, angle);
+        (void)snprintf(buf, len, "Car: spin %.1f deg\r\n", (double)angle);
+    }
+    else if (strcmp(sub, "arc") == 0)
+    {
+        if (p1 == NULL || p2 == NULL)
+        { (void)snprintf(buf, len, "Usage: car arc <mm> <deg>\r\n"); return pdFALSE; }
+        x = (float)atof(p1);
+        angle = (float)atof(p2);
+        Set_Car_Control(x, 0, angle);
+        (void)snprintf(buf, len, "Car: go %.1f mm, spin %.1f deg\r\n", (double)x, (double)angle);
+    }
+    else
+    {
+        (void)snprintf(buf, len, "Unknown: car %s.  Type 'car' for help.\r\n", sub);
+    }
     return pdFALSE;
 }
 

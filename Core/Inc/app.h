@@ -24,25 +24,30 @@
 extern "C" {
 #endif
 
+/* CMSIS RTOS2 + FreeRTOS types (osThreadId_t, TickType_t, vTaskDelayUntil, etc.) */
+#include "cmsis_os2.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
 /* ========================================================================
  * Module Enable Switches (1 = enabled, 0 = disabled)
  *
  * Disabling a module:
  *   - Removes its #include from this file
  *   - Removes its function declarations from this file
- *   - Guards its freertos.c handler body (task still created, but empty)
+ *   - Guards its freertos.c handler body (disabled task calls vTaskDelete(NULL))
  *   - Guards its app_device.c function body
  *
  * To fully reclaim RAM, also delete the task in CubeMX → FreeRTOS → Tasks.
  * ======================================================================== */
 #define APP_ENABLE_SYSMON       1   /* System monitor (heap/stack display) */
 #define APP_ENABLE_CONSOLE      1   /* CLI console via USB CDC */
-#define APP_ENABLE_QSPI         0   /* QSPI Flash + LittleFS filesystem */
+#define APP_ENABLE_QSPI         1   /* QSPI Flash + LittleFS filesystem */
 #define APP_ENABLE_DISPLAY      1   /* OLED/LCD display */
 #define APP_ENABLE_KEYBOARD     1   /* 4x4 matrix keyboard */
 #define APP_ENABLE_MUSIC        0   /* Buzzer music player */
 #define APP_ENABLE_UART_FIFO    1   /* UART frame protocol (UART3/UART4) */
-#define APP_ENABLE_ROBOTIC_ARM  0   /* Robotic arm (arm/ARobot/roboticArm/holder2D/SCSLib) */
+#define APP_ENABLE_ROBOTIC_ARM  1   /* Robotic arm (arm/ARobot/roboticArm/holder2D/SCSLib) */
 #define APP_ENABLE_IMU          1   /* IMU sensor (ICM-45686) */
 #define APP_ENABLE_LEDBLINK     1   /* LED blink task */
 #define APP_ENABLE_BROADCAST    0   /* Bluetooth broadcast via UART4 */
@@ -158,7 +163,7 @@ extern osThreadId_t DisplayHandle;
 extern osThreadId_t CarControlHandle;
 extern osThreadId_t IMUServiceHandle;
 #endif
-#if APP_ENABLE_SYSMON && APP_ENABLE_CONSOLE
+#if APP_ENABLE_SYSMON
 extern osThreadId_t ConsoleHandle;
 #endif
 

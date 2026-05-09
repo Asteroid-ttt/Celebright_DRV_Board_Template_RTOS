@@ -1,3 +1,4 @@
+#include "app.h"
 #include "uart_fifo.h"
 #if APP_ENABLE_UART_FIFO
 #include <stdio.h>

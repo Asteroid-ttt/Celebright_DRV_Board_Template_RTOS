@@ -6,6 +6,7 @@
  */
 
 
+#include "app.h"
 #include "roboticArm.h"
 #if APP_ENABLE_ROBOTIC_ARM
 #include "main.h"

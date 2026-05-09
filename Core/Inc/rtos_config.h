@@ -15,7 +15,7 @@
 #define USE_CAR_CONTROL     1
 
 /* 启用角速度 PID */
-#define V_ANGLE_PID         1
+#define V_ANGLE_PID          1
 
 /* IMU 作为角速度来源（否则使用编码器差速） */
 #define V_DEGREE_FROM_IMU   1

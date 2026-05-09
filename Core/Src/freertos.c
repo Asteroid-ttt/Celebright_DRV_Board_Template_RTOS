@@ -384,9 +384,6 @@ void MX_FREERTOS_Init(void) {
   ConsoleHandle = osThreadNew(Console_Handler, NULL, &Console_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-#if APP_ENABLE_KEYBOARD
-	Key_StartScanTask();
-#endif
 	xTaskCreate(AppInit_Task, "AppInit", 512, NULL, osPriorityNormal5, NULL);
 #if APP_ENABLE_CONSOLE
 	AppConsole_Init();
@@ -418,7 +415,7 @@ __weak void LedBlink_Handler(void *argument)
     osDelay(1000);
   }
 #else
-  osDelay(1);
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END LedBlink_Handler */
 }
@@ -436,7 +433,7 @@ __weak void Broadcast_Handler(void *argument)
 #if APP_ENABLE_BROADCAST
   AppBroadcast_Task(argument);
 #else
-  osDelay(1);
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END Broadcast_Handler */
 }
@@ -454,7 +451,7 @@ __weak void Uart4Rx_Handler(void *argument)
 #if APP_ENABLE_UART_FIFO
   AppUart4Rx_Task(argument);
 #else
-  osDelay(1);
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END Uart4Rx_Handler */
 }
@@ -472,7 +469,8 @@ __weak void IMUService_Handler(void *argument)
 #if APP_ENABLE_IMU
   AppIMUService_Task(argument);
 #else
-  osDelay(1);
+  IMUServiceHandle = NULL;
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END IMUService_Handler */
 }
@@ -504,7 +502,7 @@ __weak void KeyScan_Handler(void *argument)
 #if APP_ENABLE_KEYBOARD
   AppKeyScan_Task(argument);
 #else
-  osDelay(1);
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END KeyScan_Handler */
 }
@@ -522,7 +520,7 @@ __weak void Buzzer_Handler(void *argument)
 #if APP_ENABLE_MUSIC
   AppBuzzer_Task(argument);
 #else
-  osDelay(1);
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END Buzzer_Handler */
 }
@@ -540,7 +538,8 @@ __weak void Display_Handler(void *argument)
 #if APP_ENABLE_DISPLAY
   AppDisplay_Task(argument);
 #else
-  osDelay(1);
+  DisplayHandle = NULL;
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END Display_Handler */
 }
@@ -572,7 +571,7 @@ __weak void Uart3Rx_Handler(void *argument)
 #if APP_ENABLE_UART_FIFO
   AppUart3Rx_Task(argument);
 #else
-  osDelay(1);
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END Uart3Rx_Handler */
 }
@@ -590,7 +589,7 @@ __weak void SysMon_Handler(void *argument)
 #if APP_ENABLE_SYSMON
   AppSysMon_Task(argument);
 #else
-  osDelay(1);
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END SysMon_Handler */
 }
@@ -608,7 +607,8 @@ __weak void Console_Handler(void *argument)
 #if APP_ENABLE_CONSOLE
   AppConsole_Task(argument);
 #else
-  osDelay(1);
+  ConsoleHandle = NULL;
+  vTaskDelete(NULL);
 #endif
   /* USER CODE END Console_Handler */
 }

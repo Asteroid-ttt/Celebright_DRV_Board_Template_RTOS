@@ -12,9 +12,9 @@
 #include <math.h>
 #include "car_attitude.h"
 #include "app.h"
-#include "config.h"
-#include "motor.h"
+#if APP_ENABLE_IMU
 #include "IMU.h"
+#endif
 _car_attitude car_attitude={0};//car_attitude内变量全部初始化为0
 car_state_t car_state={0};         //共享状态
 

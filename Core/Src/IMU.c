@@ -9,6 +9,7 @@ Functionality:
 Static IMU
 Calculates the static attitude based on the sensor values.
 */
+#include "app.h"
 #include "IMU.h"
 #include "usart.h" 
 #include "inv_imu_driver.h"

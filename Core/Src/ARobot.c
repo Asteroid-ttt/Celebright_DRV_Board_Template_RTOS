@@ -2,9 +2,9 @@
 // Created by zhanng on 2025/5/19.
 //
 #include "stm32h7xx_hal.h"  // 根据实际芯片型号选择，如 f1/f4/f7 等
+#include "app.h"
 #include <stdio.h>
 #include <math.h>
-
 #include "ARobot.h"
 #if APP_ENABLE_ROBOTIC_ARM
 #include "arm.h"

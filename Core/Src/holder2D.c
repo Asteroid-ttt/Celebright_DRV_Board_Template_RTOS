@@ -1,3 +1,4 @@
+#include "app.h"
 #include "holder2D.h"
 #if APP_ENABLE_ROBOTIC_ARM
 #include "main.h"

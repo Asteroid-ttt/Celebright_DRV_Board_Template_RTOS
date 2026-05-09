@@ -1,3 +1,4 @@
+#include "app.h"
 #include "MusicPlayer.h"
 #if APP_ENABLE_MUSIC
 

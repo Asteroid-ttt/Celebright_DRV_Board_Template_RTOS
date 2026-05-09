@@ -21,9 +21,8 @@ void AppInit_Task(void *argument)
        → "USB Initialization Task" to "none". */
     MX_USB_DEVICE_Init();
 
-    /* Set car to go straight 1000mm */
-    Set_Car_Control(1000, 0, 0);
-    osDelay(3000);
+    /* Car motion is now controlled via CLI (type 'car' for help).
+       The old auto-start has been removed. */
 
     /* TODO: robotic arm init (uncomment when needed) */
     // setup_roboticArm();

@@ -22,6 +22,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "app.h"
 #include "FreeRTOS.h"
 #include "stream_buffer.h"
 /* USER CODE END INCLUDE */
@@ -266,7 +267,9 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 #if APP_ENABLE_CONSOLE
   if (console_rx_stream != NULL && Len != NULL && *Len > 0U)
   {
-    xStreamBufferSend(console_rx_stream, Buf, *Len, 0);
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xStreamBufferSendFromISR(console_rx_stream, Buf, *Len, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
 #endif
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
