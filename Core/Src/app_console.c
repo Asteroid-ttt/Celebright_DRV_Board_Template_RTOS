@@ -182,13 +182,18 @@ static BaseType_t CLI_RunTimeStatsCommand(char *buf, size_t len, const char *cmd
 static BaseType_t CLI_SysCommand(char *buf, size_t len, const char *cmd)
 {
     (void)cmd;
+#if APP_ENABLE_SYSMON
     AppSysMon_UpdateSnapshot();
     AppSysMon_BuildSystemSummary(buf, len);
+#else
+    (void)snprintf(buf, len, "SysMon disabled (APP_ENABLE_SYSMON=0).\r\n");
+#endif
     return pdFALSE;
 }
 
 static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd)
 {
+#if APP_ENABLE_QSPI
     const char *param = FreeRTOS_CLIGetParameter(cmd, 1, NULL);
 
     if (!AppQSPI_IsPresent())
@@ -240,7 +245,9 @@ static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd)
     {
         (void)snprintf(buf, len, "flash [mount|umount|format|ls|cat|info]\r\n");
     }
-
+#else
+    (void)snprintf(buf, len, "QSPI Flash disabled (APP_ENABLE_QSPI=0).\r\n");
+#endif
     return pdFALSE;
 }
 

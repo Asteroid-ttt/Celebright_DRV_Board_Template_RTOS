@@ -1,4 +1,5 @@
 #include "holder2D.h"
+#if APP_ENABLE_ROBOTIC_ARM
 #include "main.h"
 
 /* 硬件配置初始化（大端模式 & 轮模式设置） */
@@ -87,3 +88,5 @@ void draw_circle_holder(float CENTER_X, float CENTER_Y,float r,int n) {
     }
 }
 
+
+#endif /* APP_ENABLE_ROBOTIC_ARM */

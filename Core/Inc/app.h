@@ -37,7 +37,7 @@ extern "C" {
  * ======================================================================== */
 #define APP_ENABLE_SYSMON       1   /* System monitor (heap/stack display) */
 #define APP_ENABLE_CONSOLE      1   /* CLI console via USB CDC */
-#define APP_ENABLE_QSPI         1   /* QSPI Flash + LittleFS filesystem */
+#define APP_ENABLE_QSPI         0   /* QSPI Flash + LittleFS filesystem */
 #define APP_ENABLE_DISPLAY      1   /* OLED/LCD display */
 #define APP_ENABLE_KEYBOARD     1   /* 4x4 matrix keyboard */
 #define APP_ENABLE_MUSIC        0   /* Buzzer music player */

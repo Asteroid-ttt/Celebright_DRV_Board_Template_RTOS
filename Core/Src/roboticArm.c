@@ -7,6 +7,7 @@
 
 
 #include "roboticArm.h"
+#if APP_ENABLE_ROBOTIC_ARM
 #include "main.h"
 #include "SCServo.h"
 #include "FreeRTOS.h"
@@ -174,3 +175,5 @@ for (size_t i = 0; i < sizeof(angle_limits)/sizeof(angle_limits[0]); ++i)
 }
 
 
+
+#endif /* APP_ENABLE_ROBOTIC_ARM */

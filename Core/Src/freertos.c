@@ -47,13 +47,19 @@ typedef StaticTask_t osStaticThreadDef_t;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+#if APP_ENABLE_IMU
 extern float motion6[7];
 extern float ypr[3];          // yaw pitch roll
+#endif
 extern int math_pl;
+#if APP_ENABLE_UART_FIFO
 QueueHandle_t uart3_frame_queue;
 QueueHandle_t uart4_frame_queue;
+#endif
 TaskHandle_t xMotionTaskHandle = NULL;
+#if APP_ENABLE_CONSOLE
 StreamBufferHandle_t console_rx_stream = NULL;
+#endif
 
 
 /* USER CODE END Variables */
@@ -199,7 +205,7 @@ const osThreadAttr_t Console_attributes = {
   .cb_size = sizeof(ConsoleControlBlock),
   .stack_mem = &ConsoleBuffer[0],
   .stack_size = sizeof(ConsoleBuffer),
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal1,
 };
 /* Definitions for queue_key */
 osMessageQueueId_t queue_keyHandle;
@@ -403,7 +409,7 @@ void MX_FREERTOS_Init(void) {
 __weak void LedBlink_Handler(void *argument)
 {
   /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
+  //MX_USB_DEVICE_Init();
   /* USER CODE BEGIN LedBlink_Handler */
 #if APP_ENABLE_LEDBLINK
   for(;;)

@@ -1,4 +1,5 @@
 #include "keyboard.h"
+#if APP_ENABLE_KEYBOARD
 #include "main.h"
 
 /* 私有常量 */
@@ -109,3 +110,5 @@ void key_callback1()
 {
 	xTaskCreate(Task_APP_test, "APP", configMINIMAL_STACK_SIZE * 2, NULL, osPriorityNormal2, NULL);
 }
+
+#endif /* APP_ENABLE_KEYBOARD */

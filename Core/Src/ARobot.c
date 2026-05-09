@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "ARobot.h"
+#if APP_ENABLE_ROBOTIC_ARM
 #include "arm.h"
 #include "roboticArm.h"
 #include "cmsis_os.h"
@@ -231,3 +232,5 @@ void moveArmForRTOS(const uint16_t x,const  uint16_t y,const  uint16_t z){
 }
 
 
+
+#endif /* APP_ENABLE_ROBOTIC_ARM */

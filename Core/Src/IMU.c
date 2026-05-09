@@ -16,6 +16,7 @@ Calculates the static attitude based on the sensor values.
 #include "car_attitude.h"
 #include "read_aux_data_mode.h"
 #include "sys_time.h"
+#if APP_ENABLE_IMU
 xyz_f_t north, west;
 volatile float exInt, eyInt, ezInt;  // 误差积分
 volatile float q0, q1, q2, q3; // 四元数
@@ -281,3 +282,5 @@ void MPU6050_InitAng_Offset(void) {
 	// 初始化角度偏移
 }
 //------------------End of File----------------------------
+
+#endif /* APP_ENABLE_IMU */

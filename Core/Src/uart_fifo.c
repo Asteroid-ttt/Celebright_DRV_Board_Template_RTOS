@@ -1,4 +1,5 @@
 #include "uart_fifo.h"
+#if APP_ENABLE_UART_FIFO
 #include <stdio.h>
 
 extern QueueHandle_t uart3_frame_queue;  // 由主程序创建
@@ -140,3 +141,5 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
         printf("UART Transmission Complete!\n");
     }
 }
+
+#endif /* APP_ENABLE_UART_FIFO */

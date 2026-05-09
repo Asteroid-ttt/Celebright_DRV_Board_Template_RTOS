@@ -41,8 +41,10 @@ void Car_Attitude_Update_Input(void){
     left = Wheel_Get_V_Real(LEFT); // 获取左轮的实际速度
     right = Wheel_Get_V_Real(RIGHT); // 获取右轮的实际速度
     car_attitude.current_v_line = 0.5F * (left + right); // 计算小车的当前直线速度，取左右轮速度的平均值
-    #if V_DEGREE_FROM_IMU
-        car_attitude.current_v_angle =imu_g_z; // 从IMU获取角速度
+    #if V_DEGREE_FROM_IMU && APP_ENABLE_IMU
+        car_attitude.current_v_angle =imu_g_z;
+    #elif V_DEGREE_FROM_IMU
+        car_attitude.current_v_angle = 0.0F;  /* IMU disabled, angular velocity unavailable */
     #else
         car_attitude.current_v_angle = 0.5F * (right - left) * FRAME_W_HALF_REC * RAD_TO_DEGREE; // 用编码器计算小车角速度
     #endif

@@ -31,7 +31,9 @@
 /* Private macro -------------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+#if APP_ENABLE_CONSOLE
 extern StreamBufferHandle_t console_rx_stream;
+#endif
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -261,10 +263,12 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
+#if APP_ENABLE_CONSOLE
   if (console_rx_stream != NULL && Len != NULL && *Len > 0U)
   {
     xStreamBufferSend(console_rx_stream, Buf, *Len, 0);
   }
+#endif
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);

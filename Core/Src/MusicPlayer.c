@@ -1,43 +1,46 @@
 #include "MusicPlayer.h"
+#if APP_ENABLE_MUSIC
 
 void MusicPlayer_Init(){
 	HAL_TIM_PWM_Start(&htim13, TIM_CHANNEL_1);
 }
 
-// ²¥·ÅÒô·ûº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 void PlayNote(uint16_t freq, uint16_t duration) {
-    if (freq == 0) { // ÐÝÖ¹·û´¦Àí
-        __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, 0); // ÉèÖÃÕ¼¿Õ±ÈÎª0£¨¾²Òô£©
+    if (freq == 0) { // ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, 0); // ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½Õ±ï¿½Îª0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         HAL_Delay(duration);
     } else {
-        // ¸üÐÂPWMÆµÂÊ
+        // ï¿½ï¿½ï¿½ï¿½PWMÆµï¿½ï¿½
         __HAL_TIM_SET_AUTORELOAD(&htim13, freq);
-        __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, freq / 2); // 50%Õ¼¿Õ±È
+        __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, freq / 2); // 50%Õ¼ï¿½Õ±ï¿½
         
-        // Ó¦ÓÃÐÂÆµÂÊ£¨Á¢¼´ÉúÐ§£©
+        // Ó¦ï¿½ï¿½ï¿½ï¿½Æµï¿½Ê£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
         HAL_TIM_GenerateEvent(&htim13, TIM_EVENTSOURCE_UPDATE);
         
-        HAL_Delay(duration); // ³ÖÐøÖ¸¶¨Ê±³¤
+        HAL_Delay(duration); // ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½Ê±ï¿½ï¿½
     }
 }
 
-// ÑÝ×àÒôÀÖº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öºï¿½ï¿½ï¿½
 void PlayMusic(const struct MusicNote Score[], uint16_t  ScoreLength) {
     for (uint16_t i = 0; i <  ScoreLength; i++) {
         PlayNote(Score[i].Frq, Score[i].length);
     }
-    __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, 0); // ²¥·Å½áÊø¹Ø±ÕÉùÒô
+    __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, 0); // ï¿½ï¿½ï¿½Å½ï¿½ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-// ÑÝ×àÒôÀÖº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öºï¿½ï¿½ï¿½
 void playSpScoreNote(struct MusicNote Score[],uint16_t ScoreLength,uint16_t from,uint16_t to) {
     if (to >=  ScoreLength) to = ScoreLength;
 	for (uint16_t i = from; i <  to; i++) {
         PlayNote(Score[i].Frq, Score[i].length);
     }
-    __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, 0); // ²¥·Å½áÊø¹Ø±ÕÉùÒô
+    __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, 0); // ï¿½ï¿½ï¿½Å½ï¿½ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
 //Example:
 //PlayMusic(TwinkleLittleStar, sizeof(TwinkleLittleStar)/sizeof(TwinkleLittleStar[0]));
 
+
+#endif /* APP_ENABLE_MUSIC */

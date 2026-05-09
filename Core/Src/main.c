@@ -56,8 +56,10 @@
 
 /* USER CODE BEGIN PV */
 uint8_t cnt = 0;
+#if APP_ENABLE_IMU
 float motion6[7];
 float ypr[3];          // yaw pitch roll
+#endif
 int math_pl=0;          
 /* USER CODE END PV */
 
@@ -87,6 +89,14 @@ int main(void)
 
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
+
+  /* Enable the CPU Cache */
+
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
+
+  /* Enable D-Cache---------------------------------------------------------*/
+  SCB_EnableDCache();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -135,7 +145,9 @@ int main(void)
   OLED_Clear();
 #endif
   delay_init(CPU_FREQ);		//重新初始化延时函数，Parameter: CPU_FREQ
+#if APP_ENABLE_IMU
   IMU_init();
+#endif
   HAL_Delay(1000);
   HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL); //开启TIM2编码器
   HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL); //开启TIM3编码器
@@ -287,11 +299,11 @@ void MPU_Config(void)
   MPU_InitStruct.Size = MPU_REGION_SIZE_4GB;
   MPU_InitStruct.SubRegionDisable = 0x87;
   MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_BUFFERABLE;
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
   /* Enables the MPU */

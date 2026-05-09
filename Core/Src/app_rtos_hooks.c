@@ -32,13 +32,25 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
     (void)xTask;
 
     __disable_irq();
+#if APP_ENABLE_DISPLAY
     DisplayService_Clear();
     DisplayService_ShowText(0, 0, "Error!");
     DisplayService_ShowText(0, 16, "Stack Overflow!");
-    if (pcTaskName != NULL)
-    {
-        DisplayService_ShowText(0, 32, pcTaskName);
-    }
+    if (pcTaskName != NULL) { DisplayService_ShowText(0, 32, pcTaskName); }
+#endif
+    for (;;) {}
+}
+
+void vApplicationMallocFailedHook(void)
+{
+    __disable_irq();
+#if APP_ENABLE_DISPLAY
+    DisplayService_Clear();
+    DisplayService_ShowText(0, 0, "Error!");
+    DisplayService_ShowText(0, 16, "Out of memory!");
+#endif
+    for (;;) {}
+}
     for (;;) {}
 }
 

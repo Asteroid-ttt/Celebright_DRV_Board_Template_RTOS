@@ -82,7 +82,8 @@ void AppSysMon_Task(void *argument)
             AppSysMon_UpdateSnapshot();
         }
 
-        /* 显示堆剩余 + 栈水位 */
+#if APP_ENABLE_DISPLAY
+        /* Show heap free + stack watermarks on OLED */
         (void)snprintf(line_buf, sizeof(line_buf), "Heap:%luB", (unsigned long)g_heap_free);
         DisplayService_ShowText(0, 0, line_buf);
 
@@ -91,6 +92,7 @@ void AppSysMon_Task(void *argument)
 
         (void)snprintf(line_buf, sizeof(line_buf), "I:%lu K:%lu", (unsigned long)g_wm_imuservice, (unsigned long)g_wm_console);
         DisplayService_ShowText(0, 32, line_buf);
+#endif
 
         osDelay(SYSMON_DISPLAY_PERIOD_MS);
     }

@@ -7,6 +7,7 @@
  *   DISPLAY_TYPE_LCD  → LCD (TFT, lcd_model)
  */
 #include "display_service.h"
+#if APP_ENABLE_DISPLAY
 #include <string.h>
 
 #if (APP_DISPLAY_TYPE == DISPLAY_TYPE_OLED)
@@ -96,3 +97,5 @@ void DisplayService_ShowNumber(uint16_t x, uint16_t y, int32_t num, uint8_t len)
 #else
 #error "APP_DISPLAY_TYPE must be DISPLAY_TYPE_OLED or DISPLAY_TYPE_LCD"
 #endif
+
+#endif /* APP_ENABLE_DISPLAY */
