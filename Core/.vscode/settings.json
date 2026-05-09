@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "main.h": "c",
+        "type_traits": "c",
+        "stdio.h": "c",
+        "spi.h": "c",
+        "tim.h": "c",
+        "uart_fifo.h": "c",
+        "pwm.h": "c",
+        "string.h": "c",
+        "pid.h": "c",
+        "stm32h7xx_it.h": "c"
+    }
+}

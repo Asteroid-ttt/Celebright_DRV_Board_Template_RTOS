@@ -1,0 +1,35 @@
+# STM32 Keil build outputs
+*.o
+*.d
+*.crf
+*.lst
+*.axf
+*.hex
+*.bin
+*.htm
+*.dep
+*.lnp
+*.iex
+*.map
+*.bak
+*.sct
+*.scvd
+*.uvguix.*
+JLinkLog.txt
+RTE/
+*.uvoptx
+
+# Build output directories
+MDK-ARM/STMH750VBT6_Celebright_V2/
+MDK-ARM/DebugConfig/
+MDK-ARM/RTE/
+MDK-ARM/Listings/
+MDK-ARM/Objects/
+
+# Temp files
+*.tmp
+*.log
+~/tmp_lcd_*
+
+# IDE user settings
+*.uvguix.*
