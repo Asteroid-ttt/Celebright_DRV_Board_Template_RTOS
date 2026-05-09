@@ -94,7 +94,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-	init_motor();//电机初始化
+  init_motor();//电机初始化
   /* USER CODE END Init */
 
   /* Configure the system clock */

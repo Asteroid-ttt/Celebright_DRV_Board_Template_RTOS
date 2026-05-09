@@ -1,27 +1,35 @@
 /**
  * @file app_init.c
- * @brief 应用初始化任务 —— 上电后执行一次，然后自删除
+ * @brief Application initialization task — runs once, then self-deletes
  *
- * 参照 freeRTOS Template 的 AppInit_Task 模式：
- *   1. 执行后调度器启动后的初始化操作
- *   2. 设置小车初始运动命令
- *   3. 自删除释放栈空间
+ * Follows the reference template's AppInit_Task pattern:
+ *   1. USB device initialization (post-scheduler-start)
+ *   2. Set initial car motion command
+ *   3. Self-delete to free stack space
  */
 #include "app.h"
+
+extern void MX_USB_DEVICE_Init(void);
 
 void AppInit_Task(void *argument)
 {
     (void)argument;
 
-    /* 小车直行 1000mm 后停止 */
+    /* USB device initialization MUST be done after scheduler starts.
+       CubeMX also inserts this call in LedBlink_Handler (outside USER CODE).
+       To avoid duplication, set CubeMX → USB_DEVICE → Platform Settings
+       → "USB Initialization Task" to "none". */
+    MX_USB_DEVICE_Init();
+
+    /* Set car to go straight 1000mm */
     Set_Car_Control(1000, 0, 0);
     osDelay(3000);
 
-    /* TODO: 机械臂初始化（需要时取消注释） */
+    /* TODO: robotic arm init (uncomment when needed) */
     // setup_roboticArm();
     // init_ArmForRTOS();
     // moveArmForRTOS(150, 200, 50);
 
-    /* 任务自删除 */
+    /* Self-delete to free stack */
     vTaskDelete(NULL);
 }

@@ -28,6 +28,9 @@ int setup_imu(int use_ln, int accel_en, int gyro_en);
  */
 int bsp_IcmGetRawData(float accel_mg[3], float gyro_dps[3], float *temp_degc);
 
+/* SPI4 byte-level read/write (defined in spi.c) */
+u8 SPI4_ReadWriteByte(u8 TxData);
+
 #ifdef __cplusplus
 }
 #endif

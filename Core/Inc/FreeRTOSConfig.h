@@ -172,6 +172,14 @@ standard names. */
 #define configCOMMAND_INT_MAX_OUTPUT_SIZE            768
 #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS       configureTimerForRunTimeStats
 #define portGET_RUN_TIME_COUNTER_VALUE                getRunTimeCounterValue
+/*
+ * STM32H750 SysTick clock = HCLK = SYSCLK / D1CPRE / HPRE
+ * With SYSCLK=480MHz, D1CPRE=1, HPRE=2: HCLK = 240MHz
+ * FreeRTOS port.c uses configCPU_CLOCK_HZ for SysTick reload,
+ * so it MUST match the actual SysTick input clock.
+ */
+#undef  configCPU_CLOCK_HZ
+#define configCPU_CLOCK_HZ                           ( SystemCoreClock / 2U )
 /* USER CODE END Defines */
 
 #endif /* FREERTOS_CONFIG_H */
