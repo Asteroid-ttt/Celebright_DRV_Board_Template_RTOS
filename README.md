@@ -17,6 +17,7 @@
 9. [CubeMX 代码生成规范](#9-cubemx-代码生成规范)
 10. [开发流程](#10-开发流程)
 11. [重构记录](#11-重构记录)
+12. [已知局限 & 待改进](#12-已知局限--待改进)
 
 ---
 
@@ -709,9 +710,25 @@ flowchart TD
 | 审计 | 11 个宏全覆盖审计，确认编译/运行时正确性 |
 | 审计 | Handle NULL 化 (IMUService/Display/Console) |
 | 审计 | `app_init.c` 删除无用 `osDelay(3000)` |
+| Bug | `FreeRTOS_CLIGetParameter` NULL 解引用 → 所有带参数命令 (car/flash) 崩溃 |
 | 文档 | README 完全重写: mermaid 框图, CLI 参考, 模块依赖图, 配置速查 |
 | 文档 | 修正错误的 CubeMX include 描述 (区分自动生成区域和 USER CODE) |
 | 文档 | 修正过时的 `app_init.c` 初始化描述 (移除自动直行) |
+
+### Phase 7 Errata (v3.4) — 全代码审计 & 清理
+
+| 类别 | 问题 | 修复 |
+|------|------|------|
+| 编译期 | `Motor.c`、`tim.c` 中 `#include "motor.h"` 大小写 (应为 `Motor.h`)，Linux CI 失败 | 改为 `"Motor.h"` |
+| 编译期 | `oled_spi_V0.2.h` 中 `#define u8 unsigned char` 与 `main.h` 中 `typedef uint8_t u8` 冲突 | 改为 `#ifndef u8` + `uint8_t`/`uint32_t` |
+| 编译期 | `app_console.c` 中 `#include "stream_buffer.h"` 在 `#if APP_ENABLE_CONSOLE` 守卫外 | 移入守卫内 |
+| 运行时 | `app_sensor.c` IMU 数据写入局部变量 `ypr_local`/`motion6_local` 后丢弃，全局 `ypr[]`/`motion6[]` 从未更新 | 改为直接写入全局数组 |
+| 运行时 | `IMU.c:115` 中 `_Bool if_get_offset` 未初始化，垃圾值可触发提前调用 `Car_Attitude_Yaw_Update` | 初始化为 `0` |
+| 运行时 | `Motor.c:139` 文件作用域 `float temp`，用于 4 电机串行但全局可见，潜在竞态 | 移入 `Motor_Update_Output()` 局部变量 |
+| 运行时 | `app_qspi.c:124` 中 `snprintf` 截断时 `used += written` 可溢出 `buf_len` | 增加截断保护 |
+| 清理 | `keyboard.h` 中 `Key_Init()` 声明（从未实现），`pid.h` 中 `PID *Ipid`/`addPID_realize()`（从未实现），`freertos.c` 中 `xMotionTaskHandle`（从未引用），`main.c` 中 `#define To_cm`（未使用） | 全部删除 |
+
+
 
 ---
 
@@ -769,10 +786,83 @@ STM32H750VBT6_Celebright_Template_V3/
 
 ---
 
+## 12. 已知局限 & 待改进
+
+### 12.1 `car_state_t` 跨任务竞态
+
+`car_state` 结构体被 3 个任务同时读写（CarControl 10ms、IMUService 5ms、Console CLI），**当前无锁保护**。在实际使用中，由于各字段以 float 为单位读写（STM32H7 的 Cortex-M7 支持单指令 32-bit float 存取，原子性足够），且冲突窗口极小，暂未观察到实际故障。
+
+**如需正式加锁（推荐，CubeMX 友好方式）**：
+
+1. **CubeMX → Pinout & Configuration → Middleware → FREERTOS → Mutexes → Add**
+   - Name: `carStateMutex`
+2. **重新生成代码** → CubeMX 会在 `freertos.c` 中自动生成：
+   - `osMutexId_t carStateMutexHandle;`
+   - `const osMutexAttr_t carStateMutex_attributes = { .name = "carStateMutex" };`
+   - `carStateMutexHandle = osMutexNew(&carStateMutex_attributes);` (在 `MX_FREERTOS_Init()` 中)
+3. **手动在 `app.h` 中添加**（`#include "app.h"` 已经引入 `cmsis_os2.h`，`osMutexId_t` 可用）：
+   ```c
+   extern osMutexId_t carStateMutexHandle;
+   ```
+4. **在 `car_attitude.c`、`car_control.c`、`app_console.c` 中加锁**：
+   ```c
+   osMutexAcquire(carStateMutexHandle, osWaitForever);
+   // ... 读写 car_state ...
+   osMutexRelease(carStateMutexHandle);
+   ```
+
+### 12.2 软件 PWM 占空比读写竞态
+
+`TIM6_DAC_IRQHandler`（40kHz ISR）读取 `dutyA/B/C/D`，`Motor_Update_Output_All`（任务上下文）写入同一组变量。`PWM.c:14-17` 中原有的 `__disable_irq()`/`__enable_irq()` 原子保护被注释掉了。
+
+**影响**：极低概率下 ISR 读到半更新的占空比值，持续一个 PWM 周期（20ms）后自行恢复。在 1/500 分辨率下不可察觉。
+
+**修复**：取消 `PWM.c` 中 `Set_PWM_Duty()` 函数内 `__disable_irq()` 的注释即可。
+
+### 12.3 CubeMX 任务栈不回收
+
+禁用模块对应的 CubeMX 任务在启动时调用 `vTaskDelete(NULL)` 自删除，但静态分配的栈空间（BSS）不释放。全部 10 个可选任务禁用时约浪费 **~10KB RAM**。
+
+**缓解**：在 CubeMX → FreeRTOS → Tasks 中手动删除不需要的任务。
+
+### 12.4 驱动层 FLASH 不裁剪
+
+```mermaid
+flowchart LR
+    subgraph "APP_ENABLE_* 控制范围"
+        APP["app.h #if APP_ENABLE_*"] --> task["FreeRTOS handler\n√ 编译期排除"]
+        APP --> logic["业务逻辑 app_*.c\n√ 编译期排除"]
+    end
+    subgraph "不受 APP_ENABLE_* 控制"
+        driver["驱动层 .c 文件\n✗ 始终编译"]
+    end
+```
+
+| 驱动文件 | 对应开关 | 约 FLASH 占用 |
+|----------|----------|-------------|
+| `oled_spi_V0.2.c` | `APP_ENABLE_DISPLAY` | ~4 KB |
+| `lcd_st7789.c` + `lcd_model.c` + `lcd_fonts.c` + `lcd_image.c` | `APP_ENABLE_DISPLAY` | ~55 KB |
+| `inv_imu_driver.c` + `inv_imu_transport.c` + `read_aux_data_mode.c` | `APP_ENABLE_IMU` | ~20 KB |
+| `w25q256.c` + `lfs.c` + `lfs_util.c` + `lfs_port.c` | `APP_ENABLE_QSPI` | ~18 KB |
+| `SCSLib/SCS.c` + `SCSCL.c` + `SMS_STS.c` + `SCSerail.c` | `APP_ENABLE_ROBOTIC_ARM` | ~10 KB |
+| **合计（全部禁用时）** | | **~107 KB** |
+
+**缓解**：在 Keil 项目中对不需要的 `.c` 文件右键 → Options for File → ☑ Include in Target Build (取消勾选)。
+
+### 12.5 `APP_ENABLE_UART_FIFO` 同时控制 USART1
+
+`uart_fifo.c` 中 `HAL_UART_RxCptCallback` 同时处理 USART1 / USART3 / UART4 三个串口。禁用 `APP_ENABLE_UART_FIFO` 会同时关闭 USART1 的帧解析，即使 USART1 本身与帧协议无关。未来可拆分为独立的 `APP_ENABLE_UART1_FIFO`。
+
+### 12.6 FreeRTOS+CLI `GetParameter` 不支持 NULL 第三参数
+
+`FreeRTOS_CLIGetParameter(cmd, n, NULL)` 在原版 FreeRTOS+CLI 中会 NULL 解引用。本项目 `FreeRTOS_CLI.c` 已打补丁——当第三参数为 NULL 时使用栈上哑变量。如需更新 FreeRTOS+CLI 版本，需重新应用此补丁。
+
+---
+
 ## 许可
 
 Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-10*
+*最后更新: 2026-05-19*
