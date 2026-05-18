@@ -162,7 +162,6 @@ int main(void)
   //小车控制初始化
 	init_Car_Attitude();
 	init_Car_Contorl();
-	car_state_mutex = xSemaphoreCreateMutex();
 	HAL_Delay(2000);
 	printf("init ok");
 	//Flash初始化

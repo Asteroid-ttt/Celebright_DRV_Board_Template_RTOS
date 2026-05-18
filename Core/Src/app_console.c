@@ -290,29 +290,16 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
     }
     else if (strcmp(sub, "status") == 0)
     {
-        float yaw, yaw_all, v_line, v_line_tgt, v_angle, v_angle_tgt;
-        int circles;
-        _Bool stopped;
-        if (car_state_mutex != NULL) xSemaphoreTake(car_state_mutex, portMAX_DELAY);
-        yaw = car_state.yaw;
-        yaw_all = car_state.yaw_all;
-        circles = car_state.yaw_circles;
-        v_line = car_state.v_line;
-        v_line_tgt = car_state.v_line_target;
-        v_angle = car_state.v_angle;
-        v_angle_tgt = car_state.v_angle_target;
-        stopped = car_state.flag_stop;
-        if (car_state_mutex != NULL) xSemaphoreGive(car_state_mutex);
         (void)snprintf(buf, len,
             "--- Car Status ---\r\n"
             "Yaw:   %6.1f deg (total %7.1f, circles %d)\r\n"
             "V_Lin: %6.1f / %6.1f mm/s  (cur / tgt)\r\n"
             "V_Ang: %6.1f / %6.1f deg/s (cur / tgt)\r\n"
             "Stop:  %s\r\n",
-            (double)yaw, (double)yaw_all, circles,
-            (double)v_line, (double)v_line_tgt,
-            (double)v_angle, (double)v_angle_tgt,
-            stopped ? "YES" : "NO");
+            (double)car_state.yaw, (double)car_state.yaw_all, car_state.yaw_circles,
+            (double)car_state.v_line, (double)car_state.v_line_target,
+            (double)car_state.v_angle, (double)car_state.v_angle_target,
+            car_state.flag_stop ? "YES" : "NO");
     }
     else if (strcmp(sub, "speed") == 0)
     {

@@ -187,7 +187,6 @@ typedef struct {
 } car_state_t;
 
 extern car_state_t car_state;
-extern SemaphoreHandle_t car_state_mutex;  /* protects car_state from concurrent task access */
 
 /* ========================================================================
  * Display Abstraction Layer
