@@ -106,6 +106,7 @@ static void Console_Write(const char *str)
     len = (uint16_t)strlen(str);
     if (len == 0U) return;
 
+    if (hUsbDeviceFS.pClassData == NULL) return;
     hcdc = (USBD_CDC_HandleTypeDef *)hUsbDeviceFS.pClassData;
 
     /* Wait for previous USB IN transfer to complete.  CDC_Transmit_FS

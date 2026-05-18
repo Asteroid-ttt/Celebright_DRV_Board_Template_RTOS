@@ -239,8 +239,10 @@ const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
 {
     UBaseType_t uxParametersFound = 0;
     const char * pcReturn = NULL;
+    BaseType_t xDummyLength = 0;
+    BaseType_t * pxLen = (pxParameterStringLength != NULL) ? pxParameterStringLength : &xDummyLength;
 
-    *pxParameterStringLength = 0;
+    *pxLen = 0;
 
     while( uxParametersFound < uxWantedParameter )
     {
@@ -270,11 +272,11 @@ const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
 
                 while( ( ( *pcCommandString ) != 0x00 ) && ( ( *pcCommandString ) != ' ' ) )
                 {
-                    ( *pxParameterStringLength )++;
+                    ( *pxLen )++;
                     pcCommandString++;
                 }
 
-                if( *pxParameterStringLength == 0 )
+                if( *pxLen == 0 )
                 {
                     pcReturn = NULL;
                 }
@@ -286,6 +288,12 @@ const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
         {
             break;
         }
+    }
+
+    /* Write back the actual length if caller provided a buffer */
+    if( pxParameterStringLength != NULL )
+    {
+        *pxParameterStringLength = *pxLen;
     }
 
     return pcReturn;
