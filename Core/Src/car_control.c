@@ -33,10 +33,10 @@ void init_Car_Contorl(void){
 void clear_car_control(void){
     car_control.oprate_done=0;
     car_control.if_enable_interrupt=0;
-    //car_control.updated=0;
+    if (car_state_mutex != NULL) xSemaphoreTake(car_state_mutex, portMAX_DELAY);
     car_control.spin_parameter.start_yaw=car_state.yaw;
-	  //printf("%f\n",car_control.spin_parameter.start_yaw);
     car_state.yaw_circles=0;
+    if (car_state_mutex != NULL) xSemaphoreGive(car_state_mutex);
     Wheel_Clear_Distance();
     PID_Clear(&car_control.pid_line_pos);
     PID_Clear(&car_attitude.pid_v_angle);

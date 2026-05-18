@@ -12,14 +12,11 @@ void AppIMUService_Task(void *argument)
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = TASK_ITV_IMU;
 
-    float ypr_local[3];
-    float motion6_local[7];
-
     for (;;)
     {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
-        IMU_getYawPitchRoll(ypr_local);
-        IMU_TT_getgyro(motion6_local);
+        IMU_getYawPitchRoll(ypr);
+        IMU_TT_getgyro(motion6);
         Car_Attitude_Update_Input();
     }
 }

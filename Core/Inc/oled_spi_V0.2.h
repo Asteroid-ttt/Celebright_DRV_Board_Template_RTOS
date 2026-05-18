@@ -8,8 +8,13 @@
 #define OLED_DATA 1 // 鍐欐暟鎹?
 #define OLED_MODE 0
 
-#define  u8  unsigned char 
-#define  u32 unsigned int 
+/* Use standard types from main.h / stdint.h to avoid macro redefinition with main.h typedefs */
+#ifndef u8
+#define  u8  uint8_t
+#endif
+#ifndef u32
+#define  u32 uint32_t
+#endif
 
 
 //-----------------OLED绔彛瀹氫箟----------------

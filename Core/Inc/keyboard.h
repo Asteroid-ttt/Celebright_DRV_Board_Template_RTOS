@@ -39,7 +39,6 @@ extern "C" {
 /* 全局接口 */
 extern osMessageQueueId_t queue_keyHandle;  // 字符队列句柄
 
-void Key_Init(void);
 void Key_StartScanTask(void);
 void key_callback1(void);
 

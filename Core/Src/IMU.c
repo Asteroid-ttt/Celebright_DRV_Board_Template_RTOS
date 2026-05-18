@@ -112,7 +112,7 @@ int CalCount = 0;
 输出参数:  无
 *******************************************************************************/
 void IMU_getValues(float * values) {  
-	_Bool if_get_offset;//是否获取偏移量
+	_Bool if_get_offset = 0;//是否获取偏移量
 	float accgyroval[7];
 	
 	float sqrResult_gyro[3];

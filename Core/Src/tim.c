@@ -21,7 +21,7 @@
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
-#include "motor.h"
+#include "Motor.h"
 #include "spi.h"
 #include "stm32h7xx_hal_tim.h"
 /* USER CODE END 0 */

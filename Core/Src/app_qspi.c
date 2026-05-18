@@ -121,7 +121,10 @@ size_t AppQSPI_ListDir(char *buf, size_t buf_len)
                 written = snprintf(buf + used, buf_len - used, "  [DIR]  %s\r\n", info.name);
             else
                 written = snprintf(buf + used, buf_len - used, "  %6lu  %s\r\n", (unsigned long)info.size, info.name);
-            if (written > 0) used += (size_t)written;
+            if (written > 0 && (size_t)written < (buf_len - used))
+                used += (size_t)written;
+            else if (written > 0)
+                used = buf_len;  /* truncated, stop writing */
         }
     }
 

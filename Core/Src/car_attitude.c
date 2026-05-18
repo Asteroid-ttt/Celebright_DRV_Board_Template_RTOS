@@ -17,6 +17,7 @@
 #endif
 _car_attitude car_attitude={0};//car_attitude内变量全部初始化为0
 car_state_t car_state={0};         //共享状态
+SemaphoreHandle_t car_state_mutex = NULL;  //mutex for car_state concurrent access
 
 
 /*!
@@ -135,10 +136,9 @@ void Set_Car_Start(void){
  * @param time 时间，单位为秒
  */
 void Car_Attitude_Yaw_Update(float v_angle,float time){
-	  //printf("%.2f\n",v_angle);
+    if (car_state_mutex != NULL) xSemaphoreTake(car_state_mutex, portMAX_DELAY);
     car_state.yaw+=v_angle*time;
-		car_state.yaw_all+=v_angle*time;
-    //printf("%f",car_state.yaw);
+    car_state.yaw_all+=v_angle*time;
     if(car_state.yaw < 0){
         car_state.yaw+=360.0F;
         car_state.yaw_circles-=1;
@@ -147,4 +147,5 @@ void Car_Attitude_Yaw_Update(float v_angle,float time){
         car_state.yaw-=360.0F;
         car_state.yaw_circles+=1;
     }
+    if (car_state_mutex != NULL) xSemaphoreGive(car_state_mutex);
 }

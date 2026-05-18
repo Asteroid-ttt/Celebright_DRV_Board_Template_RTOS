@@ -1,4 +1,4 @@
-#include "motor.h"
+#include "Motor.h"
 #include "config.h"
 #include "spi.h"//LCD屏幕显示
 #include "PWM.h"
@@ -136,14 +136,8 @@ void Motor_Set_V_Enc(motor* motor,float v_enc){
  * @param motor 电机obj
  * @warning 逻辑是PID传入速度和目标速度都经过绝对值处理，方向通过目标速度方向控制
  */
-float temp = 0;
 void Motor_Update_Output(motor* motor){
-    // if(car_attitude.flag_stop){
-    //     motor->duty=0;
-    //     GPIOPinWrite(motor->DirBase1,motor->DirPin1,~(motor->DirPin1));
-    //     GPIOPinWrite(motor->DirBase2,motor->DirPin2,~(motor->DirPin2));
-    // }
-    // else{
+    float temp;
 			 temp = PID_Cal_Inc(&(motor->v_pid),myabs(motor->v_enc),myabs(motor->target_v_enc));	
        motor->duty=temp;
        

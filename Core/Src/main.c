@@ -44,7 +44,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define CPU_FREQ 480	//Unit:MHz;
-#define To_cm 2.54/102
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -163,6 +162,7 @@ int main(void)
   //小车控制初始化
 	init_Car_Attitude();
 	init_Car_Contorl();
+	car_state_mutex = xSemaphoreCreateMutex();
 	HAL_Delay(2000);
 	printf("init ok");
 	//Flash初始化

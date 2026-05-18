@@ -56,7 +56,6 @@ extern int math_pl;
 QueueHandle_t uart3_frame_queue;
 QueueHandle_t uart4_frame_queue;
 #endif
-TaskHandle_t xMotionTaskHandle = NULL;
 #if APP_ENABLE_CONSOLE
 StreamBufferHandle_t console_rx_stream = NULL;
 #endif

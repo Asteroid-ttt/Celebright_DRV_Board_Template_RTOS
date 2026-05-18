@@ -44,10 +44,6 @@
     float integral;     // 积分值
     float output_val;   // 输出值
 } PID;
-  extern PID *Ipid;//全局pid
- float addPID_realize(float actual_val);//计算
- /*2.25test-------------------------------------------------*/
-
 
  void Set_PID(pid* obj, float p, float i, float d);
  void Set_PID_Limit(pid*obj, float output_limit_inc, float output_limit_pos, float integral_error_limit);
