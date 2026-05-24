@@ -6,7 +6,7 @@
 #include "sys_time.h"
 #include "main.h"
 
-uint32_t nowtime = 0;  /* 原定义于 main.c，迁移至此以消除模块耦合 */
+/* nowtime removed — IMU timing now uses DWT->CYCCNT directly (v3.5+) */
 
 static uint32_t cpu_freq_hz = 480000000;
 

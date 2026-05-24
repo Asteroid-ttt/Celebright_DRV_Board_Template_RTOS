@@ -133,7 +133,6 @@ extern float ypr[3];
 extern float motion6[7];
 extern float imu_g_z;
 #endif
-extern int math_pl;
 
 /* Software PWM duty cycles (defined in PWM.c, used by TIM6 ISR and Motor) */
 extern volatile uint16_t dutyA;

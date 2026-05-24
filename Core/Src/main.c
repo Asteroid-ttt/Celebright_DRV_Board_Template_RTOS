@@ -54,12 +54,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t cnt = 0;
 #if APP_ENABLE_IMU
 float motion6[7];
 float ypr[3];          // yaw pitch roll
 #endif
-int math_pl=0;          
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,7 +101,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  init_motor();//电机初始化
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -159,6 +157,8 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim5);                  //开启TIM5更新中断
   HAL_TIM_Base_Start_IT(&htim6);
 
+  //电机初始化 (在时钟配置和 GPIO 之后, 编码器启动之后)
+  init_motor();
   //小车控制初始化
 	init_Car_Attitude();
 	init_Car_Contorl();

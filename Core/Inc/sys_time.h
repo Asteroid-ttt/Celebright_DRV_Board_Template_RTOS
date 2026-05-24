@@ -1,6 +1,6 @@
 /**
  * @file sys_time.h
- * @brief 系统时间接口 —— 封装 HAL_GetTick，解耦全局 nowtime
+ * @brief 系统时间接口 —— 封装 HAL_GetTick，DWT 微秒计数器
  */
 
 #ifndef __SYS_TIME_H__
@@ -12,11 +12,7 @@ extern "C" {
 
 #include <stdint.h>
 
-/**
- * @brief 系统时间（100us 精度），由 sys_time.c 定义
- * @note  原定义于 main.c，现迁移至此以消除模块耦合
- */
-extern uint32_t nowtime;
+/* nowtime removed from sys_time.h (v3.5+) — IMU uses DWT directly */
 
 /**
  * @brief 获取系统上电后毫秒数

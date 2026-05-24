@@ -50,7 +50,6 @@ typedef StaticTask_t osStaticThreadDef_t;
 extern float motion6[7];
 extern float ypr[3];          // yaw pitch roll
 #endif
-extern int math_pl;
 #if APP_ENABLE_UART_FIFO
 QueueHandle_t uart3_frame_queue;
 QueueHandle_t uart4_frame_queue;
@@ -382,7 +381,7 @@ void MX_FREERTOS_Init(void) {
   ConsoleHandle = osThreadNew(Console_Handler, NULL, &Console_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-	xTaskCreate(AppInit_Task, "AppInit", 512, NULL, osPriorityNormal5, NULL);
+	xTaskCreate(AppInit_Task, "AppInit", 512, NULL, osPriorityNormal6, NULL);
 #if APP_ENABLE_CONSOLE
 	AppConsole_Init();
 #endif
@@ -413,6 +412,7 @@ __weak void LedBlink_Handler(void *argument)
     osDelay(1000);
   }
 #else
+  LEDBlinkHandle = NULL;
   vTaskDelete(NULL);
 #endif
   /* USER CODE END LedBlink_Handler */
@@ -431,6 +431,7 @@ __weak void Broadcast_Handler(void *argument)
 #if APP_ENABLE_BROADCAST
   AppBroadcast_Task(argument);
 #else
+  BroadcastHandle = NULL;
   vTaskDelete(NULL);
 #endif
   /* USER CODE END Broadcast_Handler */
@@ -449,6 +450,7 @@ __weak void Uart4Rx_Handler(void *argument)
 #if APP_ENABLE_UART_FIFO
   AppUart4Rx_Task(argument);
 #else
+  Uart4RxHandle = NULL;
   vTaskDelete(NULL);
 #endif
   /* USER CODE END Uart4Rx_Handler */
@@ -500,6 +502,7 @@ __weak void KeyScan_Handler(void *argument)
 #if APP_ENABLE_KEYBOARD
   AppKeyScan_Task(argument);
 #else
+  KeyScanHandle = NULL;
   vTaskDelete(NULL);
 #endif
   /* USER CODE END KeyScan_Handler */
@@ -518,6 +521,7 @@ __weak void Buzzer_Handler(void *argument)
 #if APP_ENABLE_MUSIC
   AppBuzzer_Task(argument);
 #else
+  BuzzerHandle = NULL;
   vTaskDelete(NULL);
 #endif
   /* USER CODE END Buzzer_Handler */
@@ -569,6 +573,7 @@ __weak void Uart3Rx_Handler(void *argument)
 #if APP_ENABLE_UART_FIFO
   AppUart3Rx_Task(argument);
 #else
+  Uart3RxHandle = NULL;
   vTaskDelete(NULL);
 #endif
   /* USER CODE END Uart3Rx_Handler */
@@ -587,6 +592,7 @@ __weak void SysMon_Handler(void *argument)
 #if APP_ENABLE_SYSMON
   AppSysMon_Task(argument);
 #else
+  SysMonHandle = NULL;
   vTaskDelete(NULL);
 #endif
   /* USER CODE END SysMon_Handler */

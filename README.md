@@ -785,13 +785,46 @@ flowchart TD
 
 | 文件 | 行 | 问题 | 建议 |
 |------|-----|------|------|
-| `main.c` | 106-132 | `init_motor()` 在 `SystemClock_Config()` 之前调用，以 HSI 时钟运行 (64MHz vs 480MHz) | 将 `init_motor()` 移至 `SystemClock_Config()` 之后、`MX_GPIO_Init()` 之后 |
 | `main.c` | 151-159 | `HAL_TIM_Encoder_Start()` + `HAL_TIM_Base_Start_IT()` 应替换为 `HAL_TIM_Encoder_Start_IT()` | 分开调用可能破坏编码器模式的定时器从模式配置寄存器 |
-| `freertos.c` | 385 | `AppInit_Task` 在其它 task 之后创建，存在初始化竞态 | 将 `xTaskCreate` 移至 `osThreadNew` 任务创建之前 |
-| `freertos.c` | 416-574 | 仅 `IMUService/Display/Console` 禁用时置 NULL，其他 handler 留悬空 handle | 统一所有禁用 handler 的 `_Handle = NULL` 清理 |
-| `uart_fifo.c` | 28 | `huart1` 使用 `HAL_UART_Receive_IT` 但 `stm32h7xx_it.c` 缺少 `USART1_IRQHandler` | 若 USART1 NVIC 中断使能 → Default_Handler 宕机（若无中断使能则安全） |
-| `main.c` | 62 | `int math_pl = 0;` — 死变量，疑似 `math_pi` 的 typo | 移除或修正为 `math_pi` |
 | `arm.c` | 196 | `Theta2 = Theta - Theta1 - tmpTheta2` 简化为 `-(tmpTheta1+tmpTheta2)`，仅提供 "elbow-down" 解 | 添加 elbow-up 解 (`Theta2 = +tmpTheta2`) 以扩大可达空间 |
+
+### Phase 10 (v3.7) — 代码清理 & 初始化工程改进
+
+**DEAD CODE REMOVAL**
+
+| 文件 | 行 | 变量 | 说明 |
+|------|-----|------|------|
+| `sys_time.c` | 9 | `uint32_t nowtime` | v3.5 后 IMU 改用 DWT 直接计时，`nowtime` 不再有消费者 → 删除定义和声明 |
+| `sys_time.h` | 19 | `extern uint32_t nowtime` | 同步删除 |
+| `main.c` | 57 | `uint8_t cnt` | 仅声明未使用 → 删除 |
+| `main.c` | 62 | `int math_pl` | 声明于 `main.c`、`freertos.c:53`、`app.h:136`，全工程无消费 → 三处删除 |
+
+**INITIALIZATION ORDER (main.c)**
+
+| 位置 | 问题 | 修复 |
+|------|------|------|
+| `main.c:106` | `init_motor()` 在 `SystemClock_Config()` 前调用，以 HSI (64MHz) 运行而非 PLL (480MHz) | 移至 `MX_RAMECC_Init()` 之后、`init_Car_Attitude()` 之前（时钟 & GPIO 就绪） |
+
+**TASK HANDLE CLEANUP (freertos.c)**
+
+| Handler | 修复前 (禁用时) | 修复后 |
+|---------|----------------|--------|
+| `LedBlink_Handler` | `vTaskDelete(NULL)` | `LEDBlinkHandle = NULL; vTaskDelete(NULL)` |
+| `Broadcast_Handler` | `vTaskDelete(NULL)` | `BroadcastHandle = NULL; vTaskDelete(NULL)` |
+| `Uart4Rx_Handler` | `vTaskDelete(NULL)` | `Uart4RxHandle = NULL; vTaskDelete(NULL)` |
+| `KeyScan_Handler` | `vTaskDelete(NULL)` | `KeyScanHandle = NULL; vTaskDelete(NULL)` |
+| `Buzzer_Handler` | `vTaskDelete(NULL)` | `BuzzerHandle = NULL; vTaskDelete(NULL)` |
+| `Uart3Rx_Handler` | `vTaskDelete(NULL)` | `Uart3RxHandle = NULL; vTaskDelete(NULL)` |
+| `SysMon_Handler` | `vTaskDelete(NULL)` | `SysMonHandle = NULL; vTaskDelete(NULL)` |
+
+> 原先仅 `IMUService`/`Display`/`Console` 三个 handler 正确置 NULL（它们被 SysMon 读取水位）。全部 10 个 handler 现在一致：禁用时先置 NULL 再自删除。
+
+**AppInit_Task 优先级**
+
+| 项目 | 修复前 | 修复后 |
+|------|--------|--------|
+| 优先级 | `osPriorityNormal5` (= CarControl) | `osPriorityNormal6` |
+| 说明 | 与 CarControl 同优先级 → 可能交错执行 | 确保 `MX_USB_DEVICE_Init()` 在其他任务前完成 |
 
 
 
@@ -930,4 +963,4 @@ Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-22*
+*最后更新: 2026-05-23*
