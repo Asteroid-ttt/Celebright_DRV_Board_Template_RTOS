@@ -113,7 +113,7 @@ void setup_roboticArm(void) {
 void set_servo_angle_roboticArm(uint8_t ID, float angle) {
 	
     // 角度转舵机位置编码（300°对应1024步）
-    int position = (angle / 300.0) * 1024; 
+    int position = (int)(angle / 300.0f * 1024.0f); 
 	
     //舵机(ID)以最高速度V=10*0.059=0.59rpm，运行至position位置(有机械大小限制）
     WritePos(ID,limit_angle(ID,position), 0, 100);
@@ -127,16 +127,16 @@ void set_servo_angle_roboticArm(uint8_t ID, float angle) {
 void set_servo_angle_offset_roboticArm(uint8_t ID, float angle) {
 
     // 计算偏移量（角度→编码）
-    int offset = (angle / 300.0) * 1024; 
+    int offset = (int)(angle / 300.0f * 1024.0f); 
     // 读取当前位置（需确保舵机反馈正常）
     int pre_position = ReadPos(ID); 
-	int target_position;
+	int target_position = pre_position; /* fallback: stay at current position if ID unknown */
     // 计算目标位置并限制范围
 	for (size_t i = 0; i < sizeof(angle_limits)/sizeof(angle_limits[0]); ++i)
 	{
         if (angle_limits[i].id == ID) {
      target_position = angle_limits[i].middle + offset;
-			break;
+ 			break;
 		}
 	}
     

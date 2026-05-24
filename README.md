@@ -787,6 +787,31 @@ flowchart TD
 |------|-----|------|------|
 | `main.c` | 151-159 | `HAL_TIM_Encoder_Start()` + `HAL_TIM_Base_Start_IT()` 应替换为 `HAL_TIM_Encoder_Start_IT()` | 分开调用可能破坏编码器模式的定时器从模式配置寄存器 |
 | `arm.c` | 196 | `Theta2 = Theta - Theta1 - tmpTheta2` 简化为 `-(tmpTheta1+tmpTheta2)`，仅提供 "elbow-down" 解 | 添加 elbow-up 解 (`Theta2 = +tmpTheta2`) 以扩大可达空间 |
+| `SCSLib` | - | 第三方 SCSCL 舵机协议库设计为单线程：全局 `wBuf[128]`/`Mem[]`/`Level`/`End`/`u8Status`/`u8Error` 被所有 FreeRTOS 任务共享 | 确保仅一个任务调用 SCS 函数，或在上层实施互斥锁 |
+| `roboticArm.c` | 34 | `ReadPos(1)` 返回值未校验（舵机未连接时返回 -1 → 解包为垃圾值 → 错误侧判断） | 添加 `if (init_Pos_1 < 0) goto error;` |
+
+### Phase 11 (v3.8) — SCSLib / LittleFS / 机械臂接口审计
+
+**CRITICAL**
+
+| 文件 | 行 | 问题 | 影响 | 修复 |
+|------|-----|------|------|------|
+| `roboticArm.c` | 133 | `target_position` 声明但未初始化；若 `for` 循环找不到匹配的舵机 ID，`limit_angle(ID, target_position)` 传入垃圾值 | 舵机可能意外跳转到任意位置 → 物理碰撞风险 | 初始化为 `pre_position`（当前读回位置），找不到 ID 时保持原位 |
+
+**MEDIUM**
+
+| 文件 | 行 | 问题 | 影响 | 修复 |
+|------|-----|------|------|------|
+| `roboticArm.c` | 116, 130 | `angle / 300.0 * 1024` 使用 `double` 字面量 (ARM FPU 为单精度，每次触发 double→float 转换) | 精度无实质影响但效率略低 | `300.0f` 替代 `300.0` |
+
+**LOW (已知局限，文档化)**
+
+| 文件 | 行 | 问题 |
+|------|-----|------|
+| `w25q256.c` | 248 | `HAL_GetTick() - start < timeout_ms` — 32-bit tick 回绕 (49 天) 时 timeout 提前结束（实际使用中永远不会触发） |
+| `SCSerail.c` | 25-32 | `writeSCS` 缓冲区满后静默丢字节（无溢出但数据不完整） |
+| `SCS.c` | 294-314 | `checkHead()` 若 UART 读阻塞则永久挂起（当前 `ftUart_Read` 有 100ms timeout，安全） |
+| `SCSCL.c` | 41 | `SyncWritePos` 使用固定栈缓冲区 `offbuf[32*6]`，若 IDN > 32 栈溢出（实际仅 5 个舵机，安全） |
 
 ### Phase 10 (v3.7) — 代码清理 & 初始化工程改进
 
@@ -963,4 +988,4 @@ Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-23*
+*最后更新: 2026-05-24*
