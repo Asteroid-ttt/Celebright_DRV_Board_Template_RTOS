@@ -43,22 +43,23 @@ void DisplayService_ShowNumber(uint16_t x, uint16_t y, int32_t num, uint8_t len)
 {
     u8 page = to_page(y);
     u32 display_val;
-    char sign_char;
+    char sign_str[2];
 
     if (num < 0)
     {
-        sign_char = '-';
+        sign_str[0] = '-';
         display_val = (u32)(-num);
     }
     else
     {
-        sign_char = ' ';
+        sign_str[0] = ' ';
         display_val = (u32)num;
     }
+    sign_str[1] = '\0';
 
     if ((x >= 8U) && (len > 1U))
     {
-        OLED_ShowString((u8)(x - 8U), page, &sign_char);
+        OLED_ShowString((u8)(x - 8U), page, sign_str);
         OLED_ShowNum((u8)x, page, display_val, (u8)(len - 1U), 12U);
     }
     else

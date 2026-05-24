@@ -23,7 +23,7 @@
 // 定义常量
 #define PI (3.14159265358979323846f)
 
-#define EPSILON 1.0f // 浮点比较允许的误差
+#define EPSILON 1e-4f // 浮点比较允许的误差
 // 定义舵机最大的角度 使用弧度制
 #define MAX_ANGLE 5.0/6.0 * PI
 #define MIN_ANGLE -5.0/6.0 * PI
@@ -69,6 +69,7 @@ uint8_t _isValidArmConfiguration(const RoboticArm* arm) {
     // 检查角度是否在有效范围内
     if (arm->theta1 < MIN_ANGLE || arm->theta1 > MAX_ANGLE ||
         arm->theta2 < MIN_ANGLE || arm->theta2 > MAX_ANGLE ||
+        arm->theta3 < MIN_ANGLE || arm->theta3 > MAX_ANGLE ||
         arm->angle < MIN_ANGLE || arm->angle > MAX_ANGLE) {
         return false;
     }
@@ -83,6 +84,7 @@ uint8_t _isValidArmConfiguration_Angle(const V_Angle * arm) {
     // 检查角度是否在有效范围内
     if (arm->theta1 < MIN_ANGLE || arm->theta1 > MAX_ANGLE ||
         arm->theta2 < MIN_ANGLE || arm->theta2 > MAX_ANGLE ||
+        arm->theta3 < MIN_ANGLE || arm->theta3 > MAX_ANGLE ||
         arm->angle < MIN_ANGLE || arm->angle > MAX_ANGLE) {
         return false;
     }
@@ -187,14 +189,22 @@ uint8_t _inverseKinematics(RoboticArm* arm, const V_Position* target, V_Angle * 
     }
 
     float dist = sqrtf(distSq);
+    if (dist < EPSILON) {
+        return false;  /* target too close to origin → no valid IK solution */
+    }
     float Theta = atan2f(targetY, targetX);
 
-    float tmpTheta1 = acosf((powf(targetX, 2) + powf(targetY, 2) + powf(arm->link1, 2) - powf(arm->link2, 2))/ (2.0f * arm->link1 * dist));
-    float tmpTheta2 = acosf( (powf(targetX, 2) + powf(targetY, 2) + powf(arm->link2, 2) - powf(arm->link1, 2)) / (2.0f * arm->link2 * dist) );
+    float arg1 = (targetX * targetX + targetY * targetY + arm->link1 * arm->link1 - arm->link2 * arm->link2) / (2.0f * arm->link1 * dist);
+    float arg2 = (targetX * targetX + targetY * targetY + arm->link2 * arm->link2 - arm->link1 * arm->link1) / (2.0f * arm->link2 * dist);
+    if (arg1 > 1.0f) arg1 = 1.0f;  if (arg1 < -1.0f) arg1 = -1.0f;
+    if (arg2 > 1.0f) arg2 = 1.0f;  if (arg2 < -1.0f) arg2 = -1.0f;
+
+    float tmpTheta1 = acosf(arg1);
+    float tmpTheta2 = acosf(arg2);
 
     float Theta1 = Theta + tmpTheta1;
     float Theta2 = Theta - Theta1 - tmpTheta2;
-    float Theta3 = theta3 - (Theta1 + Theta2);
+    float Theta3 = theta3 - (Theta1 + Theta2 + PI / 2.0f); /* subtract PI/2 for the world-frame reference of link3 */
 
     angle->theta1 =  Theta1 - PI / 2;
     angle->theta2 = Theta2;
@@ -288,8 +298,8 @@ uint8_t _setArmAngle(RoboticArm* arm, const V_Angle* angle) {
         return false;
     }
 
-    // 检查角度是否在有效范围内
-    if (!_isValidArmConfiguration(arm)) {
+    // 检查新目标角度是否在有效范围内
+    if (!_isValidArmConfiguration_Angle(angle)) {
         return false;
     }
 

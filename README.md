@@ -759,6 +759,40 @@ flowchart TD
 | `tim.c` | 575-614 | 注释称"左后轮加负号"，但代码中对右后轮 (`TIM5`) 取负 | 可能与实际硬件接线不符，需现场验证电机转向 |
 | `PWM.c` | 14-24 | `Set_PWM_Duty` 原子保护被注释 | 已列入 §12.2 已知局限，取消注释即可修复 |
 
+### Phase 9 (v3.6) — 子系统深度审计修复
+
+**CRITICAL (运行时崩溃或数据损坏)**
+
+| 文件 | 行 | 问题 | 影响 | 修复 |
+|------|-----|------|------|------|
+| `display_service.c` | 61 | `&sign_char` 作为字符串传给 `OLED_ShowString`，缺少 `\0` 终止符 | 显示数字时读取栈上随机数据直到遇到 `\0`，可能越界访问导致 hard fault | 改为 `char sign_str[2]` + `sign_str[1]='\0'` |
+| `arm.c` | 192-193 | `acosf()` 参数未做定义域保护 `[-1,+1]`，浮点误差可触发 NaN | `_inverseKinematics` 返回 NaN → 机械臂关节角度全部 NaN → 物理碰撞风险 | `arg1/arg2 = clamp(x, -1, +1)` 替代 `powf()` |
+| `arm.c` | 189 | `dist = sqrtf(distSq)` 可能为 0，导致 192-193 行 **除以零** | 同上，`acosf(inf)` → NaN | `if (dist < EPSILON) return false;` |
+| `arm.c` | 292 | `_setArmAngle` 调用 `_isValidArmConfiguration(arm)` 验证 **旧** 角度 (`arm->theta1`)，而非传入的 **新** 目标角度 `angle->theta1` | 越界目标角可通过验证（若当前角度合法），直接写入越限值 | `_isValidArmConfiguration_Angle(angle)` |
+| `uart_fifo.c` | 142 | `printf()` 在 ISR 上下文 (`HAL_UART_TxCpltCallback`) 调用 | 若 retargeted `printf` 使用 FreeRTOS 互斥锁 → ISR 中死锁 / HardFault | 删除 `printf`，保留空回调 |
+| `uart_fifo.c` | 123-131 | `UART_SendFrame` 不检查 `byte_length+2 > sizeof(uart_tx_buffer)` | 攻击者/调用者传入长帧 → `uart_tx_buffer` 栈溢出 | 添加 `sizeof` 边界检查 |
+| `uart_fifo.c` | 117 | `printf` 在 `UART_SendFrame` 中打印错误消息 | 同上 — 若 `UART_SendFrame` 被 ISR 或持锁任务调用，死锁 | 删除 `printf` |
+
+**MEDIUM (功能异常/精度损失)**
+
+| 文件 | 行 | 问题 | 影响 | 修复 |
+|------|-----|------|------|------|
+| `arm.c` | 197 | `Theta3 = theta3 - (Theta1 + Theta2)` 缺少 `- PI/2` 项 | 正向运动学使用 `theta1 + theta2 + PI/2 + theta3`，缺少 `PI/2` 导致第三关节与世界坐标系 **90° 固定偏移** | `+ PI / 2.0f` |
+| `arm.c` | 64-77 | `_isValidArmConfiguration` 和 `_isValidArmConfiguration_Angle` 没有校验 `theta3` | 第三关节角度可静默越界 | 增加 `arm->theta3` 校验行 |
+| `arm.c` | 26 | `EPSILON = 1.0f` — 比正常容差大 6 个数量级 | 最小展距检查 `distSq < minReach² - EPSILON` 在短臂配比时形同虚设，允许不可达坐标通过 → 触发 `acosf` NaN | `EPSILON = 1e-4f` |
+
+**DESIGN NOTES (本次不修改，留作参考)**
+
+| 文件 | 行 | 问题 | 建议 |
+|------|-----|------|------|
+| `main.c` | 106-132 | `init_motor()` 在 `SystemClock_Config()` 之前调用，以 HSI 时钟运行 (64MHz vs 480MHz) | 将 `init_motor()` 移至 `SystemClock_Config()` 之后、`MX_GPIO_Init()` 之后 |
+| `main.c` | 151-159 | `HAL_TIM_Encoder_Start()` + `HAL_TIM_Base_Start_IT()` 应替换为 `HAL_TIM_Encoder_Start_IT()` | 分开调用可能破坏编码器模式的定时器从模式配置寄存器 |
+| `freertos.c` | 385 | `AppInit_Task` 在其它 task 之后创建，存在初始化竞态 | 将 `xTaskCreate` 移至 `osThreadNew` 任务创建之前 |
+| `freertos.c` | 416-574 | 仅 `IMUService/Display/Console` 禁用时置 NULL，其他 handler 留悬空 handle | 统一所有禁用 handler 的 `_Handle = NULL` 清理 |
+| `uart_fifo.c` | 28 | `huart1` 使用 `HAL_UART_Receive_IT` 但 `stm32h7xx_it.c` 缺少 `USART1_IRQHandler` | 若 USART1 NVIC 中断使能 → Default_Handler 宕机（若无中断使能则安全） |
+| `main.c` | 62 | `int math_pl = 0;` — 死变量，疑似 `math_pi` 的 typo | 移除或修正为 `math_pi` |
+| `arm.c` | 196 | `Theta2 = Theta - Theta1 - tmpTheta2` 简化为 `-(tmpTheta1+tmpTheta2)`，仅提供 "elbow-down" 解 | 添加 elbow-up 解 (`Theta2 = +tmpTheta2`) 以扩大可达空间 |
+
 
 
 ---
@@ -896,4 +930,4 @@ Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-20*
+*最后更新: 2026-05-22*

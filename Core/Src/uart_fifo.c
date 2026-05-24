@@ -115,11 +115,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 void UART_SendFrame(uint8_t *bit_data, uint16_t bit_length) {
     if (bit_length % 8 != 0) {
-        printf("Error: Bit length must be a multiple of 8!\n");
         return;
     }
 
-    uint16_t byte_length = bit_length / 8;  
+    uint16_t byte_length = bit_length / 8;
+
+    /* Prevent buffer overflow: need byte_length + 2 bytes (header + tail) */
+    if ((byte_length + 2U) > sizeof(uart_tx_buffer)) {
+        return;
+    }
 
     uart_tx_buffer[0] = FRAME_HEADER;
 
@@ -139,7 +143,7 @@ void UART_SendFrame(uint8_t *bit_data, uint16_t bit_length) {
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
     if (huart->Instance == USART1) {
-        printf("UART Transmission Complete!\n");
+        /* Tx complete — avoid printf in ISR (can deadlock retarget) */
     }
 }
 
