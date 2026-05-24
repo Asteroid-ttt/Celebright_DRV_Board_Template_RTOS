@@ -55,8 +55,13 @@ void clear_car_control(void){
  * @param y 目标点y值 mm
  * @param angle degree
  */
+/* 浮点零值比较容差 (mm 或 degree) */
+#define FLOAT_EPSILON 0.001F
+
+static inline _Bool is_near_zero(float v) { return fabsf(v) < FLOAT_EPSILON; }
+
 void Set_Car_Control(float x, float y, float angle){
-    if(y==0 && x!=0 && angle==0){
+    if(is_near_zero(y) && !is_near_zero(x) && is_near_zero(angle)){
         car_control.mode=GO_LINE;
         car_control.target_line_distance=x/2;
 
@@ -67,12 +72,15 @@ void Set_Car_Control(float x, float y, float angle){
         car_control.target_line_distance=add_bias(car_control.target_line_distance,0);
         car_control.to_point_parameter.interrupt_tolerance=add_bias(car_control.to_point_parameter.interrupt_tolerance,0);
     }
-    else if(y!=0 && x!=0 && angle==0){
+    else if(!is_near_zero(y) && !is_near_zero(x) && is_near_zero(angle)){
         car_control.mode=TO_POINT;
         car_control.to_point_parameter.dir=y>0?1.0F:-1.0F;
         y=fabsf(y);
         car_control.to_point_parameter.R=(x*x+y*y)/(2*y);
-        car_control.target_line_distance=car_control.to_point_parameter.R * asin(x/car_control.to_point_parameter.R);
+        float ratio = x / car_control.to_point_parameter.R;
+        if (ratio > 1.0F) ratio = 1.0F;
+        if (ratio < -1.0F) ratio = -1.0F;
+        car_control.target_line_distance=car_control.to_point_parameter.R * asinf(ratio);
         
         clear_car_control();
 
@@ -81,7 +89,7 @@ void Set_Car_Control(float x, float y, float angle){
         car_control.target_line_distance=add_bias(car_control.target_line_distance,0);
         car_control.to_point_parameter.interrupt_tolerance=add_bias(car_control.to_point_parameter.interrupt_tolerance,0);
     }
-    else if(x==0 && angle!=0){
+    else if(is_near_zero(x) && !is_near_zero(angle)){
         car_control.mode=SPIN;
         car_control.target_spin_angle=angle;
         car_control.spin_parameter.r=fabsf(y/2);

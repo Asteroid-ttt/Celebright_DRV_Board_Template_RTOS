@@ -22,8 +22,7 @@ xyz_f_t north, west;
 volatile float exInt, eyInt, ezInt;  // 误差积分
 volatile float q0, q1, q2, q3; // 四元数
 volatile float integralFBhand, handdiff;
-volatile uint32_t lastUpdate, now; // 时间变量，单位us
-volatile float yaw[5] = {0, 0, 0, 0, 0};  // 偏航角值
+/* Timing now uses DWT->CYCCNT directly in IMU_AHRSupdate() */volatile float yaw[5] = {0, 0, 0, 0, 0};  // 偏航角值
 int16_t Ax_offset = 0, Ay_offset = 0;
 float TTangles_gyro[7]; // 陀螺仪角度
 float Angle_Final[3]; // 最终角度
@@ -35,12 +34,11 @@ void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float 
 // 快速计算倒数平方根
 float invSqrt1(float x) {
 	float halfx = 0.5f * x;
-	float y = x;
-	long i = *(long*)&y;
-	i = 0x5f3759df - (i >> 1);
-	y = *(float*)&i;
-	y = y * (1.5f - (halfx * y * y));
-	return y;
+	union { float f; long l; } y;
+	y.f = x;
+	y.l = 0x5f3759df - (y.l >> 1);
+	y.f = y.f * (1.5f - (halfx * y.f * y.f));
+	return y.f;
 }
 
 
@@ -55,8 +53,6 @@ void IMU_init(void) {
 		exInt = 0.0;
 		eyInt = 0.0;
 		ezInt = 0.0;
-		lastUpdate = nowtime; // 初始化时间
-		now = nowtime;
 		return;
 	}
 	printf("IMU ERROR!!\r\n");
@@ -112,7 +108,7 @@ int CalCount = 0;
 输出参数:  无
 *******************************************************************************/
 void IMU_getValues(float * values) {  
-	_Bool if_get_offset = 0;//是否获取偏移量
+	static _Bool if_get_offset = 0;//是否获取偏移量
 	float accgyroval[7];
 	
 	float sqrResult_gyro[3];
@@ -168,6 +164,12 @@ void IMU_AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, 
 	float vx, vy, vz;
 	float ex, ey, ez, halfT;
 	float tempq0, tempq1, tempq2, tempq3;
+	static uint32_t last_dwt = 0;
+	uint32_t now_dwt = DWT->CYCCNT;
+	uint32_t delta_dwt = now_dwt - last_dwt; /* unsigned subtraction handles wrap */
+	float dt = (float)delta_dwt / 480000000.0f; /* seconds @ 480 MHz */
+	halfT = dt * 0.5f;
+	last_dwt = now_dwt;
 
 	// 计算四元数的乘积
 	float q0q0 = q0 * q0;
@@ -179,15 +181,7 @@ void IMU_AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, 
 	float q1q3 = q1 * q3;
 	float q2q2 = q2 * q2;   
 	float q2q3 = q2 * q3;
-	float q3q3 = q3 * q3;   
-
-	now = nowtime;  // 获取当前时间
-	if (now < lastUpdate) { // 处理时间溢出
-		halfT = ((float)(now + (0xffff - lastUpdate)) / 20000.0f);
-	} else {
-		halfT = ((float)(now - lastUpdate) / 20000.0f);
-	}
-	lastUpdate = now;	// 更新上次时间
+	float q3q3 = q3 * q3;
 	
 	norm = invSqrt1(ax * ax + ay * ay + az * az);       
 	ax = ax * norm;
@@ -210,7 +204,7 @@ void IMU_AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, 
 	ey = (az * vx - ax * vz);
 	ez = (ax * vy - ay * vx);
 
-	if (ex != 0.0f && ey != 0.0f && ez != 0.0f) {
+	if (ex != 0.0f || ey != 0.0f || ez != 0.0f) {
 		exInt = exInt + ex * Ki * halfT;
 		eyInt = eyInt + ey * Ki * halfT;	
 		ezInt = ezInt + ez * Ki * halfT;

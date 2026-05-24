@@ -93,8 +93,9 @@ void Set_Car_Attitude(float v_line_target,float v_angle_target){
     car_attitude.target_v_line = v_line_target;
     car_attitude.target_v_angle = v_angle_target;
 
-    // 如果目标速度和角速度均为0，则设置小车停止，否则启动小车
-    if (car_attitude.target_v_line == 0 && car_attitude.target_v_angle == 0) {
+    // 如果目标速度和角速度均接近0，则设置小车停止，否则启动小车
+    #define V_EPSILON 0.5F
+    if (fabsf(car_attitude.target_v_line) < V_EPSILON && fabsf(car_attitude.target_v_angle) < V_EPSILON) {
         Set_Car_Stop();
     } else {
         Set_Car_Start();

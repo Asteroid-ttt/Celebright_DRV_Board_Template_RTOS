@@ -728,6 +728,37 @@ flowchart TD
 | 运行时 | `app_qspi.c:124` 中 `snprintf` 截断时 `used += written` 可溢出 `buf_len` | 增加截断保护 |
 | 清理 | `keyboard.h` 中 `Key_Init()` 声明（从未实现），`pid.h` 中 `PID *Ipid`/`addPID_realize()`（从未实现），`freertos.c` 中 `xMotionTaskHandle`（从未引用），`main.c` 中 `#define To_cm`（未使用） | 全部删除 |
 
+### Phase 8 (v3.5) — 全工程逻辑错误系统性修复
+
+本次审计对全部 100+ 源文件进行逻辑错误排查，发现并修复以下问题：
+
+**CRITICAL (功能丧失/崩溃)**
+
+| 文件 | 行 | 问题 | 影响 | 修复 |
+|------|-----|------|------|------|
+| `IMU.c` | 115 | `if_get_offset` 为局部变量（非 `static`），每次调用重置为 0 | 仅在首次校准瞬间调用一次 `Car_Attitude_Yaw_Update`，之后 yaw 永远冻结，所有 spin/arc 命令完全错误 | `static _Bool if_get_offset = 0;` |
+| `IMU.c` | 184-189 | `nowtime` 从未更新（始终为 0），`halfT` 恒为 0 | AHRS 四元数积分项永不更新，IMU 姿态完全冻结 | 改用 `DWT->CYCCNT` 直接测量时间差 |
+| `app_sensor.c` | 20 | `AppIMUService_Task` 调用 `Car_Attitude_Update_Input()` | IMU 任务无 fresh 编码器数据，用 stale 值覆盖 control task 刚更新的正确姿态 | 移除该调用，仅由 `AppCarControl_Task` 更新姿态 |
+| `car_control.c` | 58-99 | `Set_Car_Control()` 使用 `y==0`、`x!=0` 等精确浮点比较 | 参数如 0.0001 会被误判为 0，模式选择逻辑失效 | 引入 `is_near_zero()` 使用 `FLOAT_EPSILON=0.001F` |
+| `car_attitude.c` | 97 | `target_v_line == 0 && target_v_angle == 0` 精确浮点比较 | 极小非零值无法触发停止，小车可能微动不止 | `fabsf(val) < V_EPSILON(0.5F)` |
+| `car_control.c` | 75 | `asin(x/R)` 未做定义域保护，x>R 时返回 NaN | `TO_POINT` 模式下 R 计算受浮点误差影响可产生 NaN，PID 输入异常 | `ratio = clamp(x/R, -1, 1)` + `asinf(ratio)` |
+
+**MEDIUM (潜在问题/UB)**
+
+| 文件 | 行 | 问题 | 修复 |
+|------|-----|------|------|
+| `IMU.c` | 213 | `ex != 0.0f && ey != 0.0f && ez != 0.0f` 精确比较 | `||` 替代 `&&`，允许单轴误差即可触发修正 |
+| `Motor.c` | 109 | `Motor_Set_V_Real` 先转 `int` 再转 `float`，精度丢失 | 直接计算 `float v_enc = V_REAL_TO_ENC * v_real` |
+| `IMU.c` | 36-44 | `invSqrt1` 使用 `*(long*)&y` 违反 C 严格别名规则 (UB) | `union { float f; long l; }` 替代 |
+| `freertos.c` | 22-25 | `#include "FreeRTOS.h"` 重复 | 删除重复行 |
+
+**已知遗留问题**（需硬件配合验证，本次未修改）
+
+| 文件 | 行 | 问题 | 说明 |
+|------|-----|------|------|
+| `tim.c` | 575-614 | 注释称"左后轮加负号"，但代码中对右后轮 (`TIM5`) 取负 | 可能与实际硬件接线不符，需现场验证电机转向 |
+| `PWM.c` | 14-24 | `Set_PWM_Duty` 原子保护被注释 | 已列入 §12.2 已知局限，取消注释即可修复 |
+
 
 
 ---
@@ -865,4 +896,4 @@ Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-19*
+*最后更新: 2026-05-20*

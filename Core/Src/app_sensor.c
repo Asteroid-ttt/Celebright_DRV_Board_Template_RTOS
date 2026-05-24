@@ -17,7 +17,9 @@ void AppIMUService_Task(void *argument)
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         IMU_getYawPitchRoll(ypr);
         IMU_TT_getgyro(motion6);
-        Car_Attitude_Update_Input();
+        /* NOTE: Car_Attitude_Update_Input() is called by AppCarControl_Task
+         * (10ms) after fresh encoder data is available. Calling it here with
+         * stale encoder values would overwrite the correct attitude. */
     }
 }
 #endif

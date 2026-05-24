@@ -107,8 +107,8 @@ Set_PID(&motor_RightRear.v_pid, P_RR, I_RR, D_RR);
  * @param v_real 目标速度mm/s,float
  */
 void Motor_Set_V_Real(motor* motor,float v_real){
-    int v_enc=V_REAL_TO_ENC*v_real;
-    Motor_Set_V_Enc(motor,v_enc);
+    float v_enc = V_REAL_TO_ENC * v_real;
+    Motor_Set_V_Enc(motor, v_enc);
 }
 
 /*!
