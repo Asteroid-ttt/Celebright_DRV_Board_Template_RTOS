@@ -63,7 +63,7 @@ static inline _Bool is_near_zero(float v) { return fabsf(v) < FLOAT_EPSILON; }
 void Set_Car_Control(float x, float y, float angle){
     if(is_near_zero(y) && !is_near_zero(x) && is_near_zero(angle)){
         car_control.mode=GO_LINE;
-        car_control.target_line_distance=x/2;
+        car_control.target_line_distance=x;
 
         clear_car_control();
         
