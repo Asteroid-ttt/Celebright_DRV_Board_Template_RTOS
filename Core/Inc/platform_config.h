@@ -16,8 +16,17 @@
 /* 编码器四倍频 */
 #define USE_4_TIMES_ENCODER     1
 
-/* 每圈编码器脉冲数 */
-#define ENC_EVERY_CIRCLE        1061.268F
+/* 编码器：轮趣科技 GMR 编码器电机, 500线 */
+#define ENC_LINES               500         /* 编码器线数 (PPR) */
+
+/* 四倍频：CubeMX 需配置 TIMx EncoderMode = TI12, IC Polarity = BothEdge */
+#define ENC_MULTIPLIER          4           /* 4x 计数 */
+
+/* 减速比 1:28 (电机轴 : 轮轴) */
+#define GEAR_RATIO              28
+
+/* 每圈轮子编码器脉冲数 = ENC_LINES × ENC_MULTIPLIER × GEAR_RATIO */
+#define ENC_EVERY_CIRCLE        ((float)(ENC_LINES * ENC_MULTIPLIER * GEAR_RATIO))
 
 /* 轮径 mm */
 #define WHEEL_DIR               47F
