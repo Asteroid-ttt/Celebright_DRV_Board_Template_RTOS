@@ -29,6 +29,15 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 #define CONSOLE_OUTPUT_MAX_LEN  768U
 #define CONSOLE_PROMPT          "> "
 
+/* FreeRTOS_CLIGetParameter returns a pointer into the raw command string;
+ * the parameter is NOT null-terminated at its boundary — e.g., for
+ * "car go 1000", parameter 1 points to "go 1000", not "go\0".
+ * Use this macro instead of strcmp() to safely compare against literals. */
+#define PARAM_MATCH(p, plen, literal) \
+    ((p) != NULL && (plen) > 0 && \
+     (size_t)(plen) == (sizeof(literal) - 1U) && \
+     strncmp((p), (literal), (size_t)(plen)) == 0)
+
 static char g_cli_output[CONSOLE_OUTPUT_MAX_LEN];
 static bool g_cli_registered = false;
 
@@ -200,7 +209,8 @@ static BaseType_t CLI_SysCommand(char *buf, size_t len, const char *cmd)
 static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd)
 {
 #if APP_ENABLE_QSPI
-    const char *param = FreeRTOS_CLIGetParameter(cmd, 1, NULL);
+    BaseType_t plen = 0;
+    const char *param = FreeRTOS_CLIGetParameter(cmd, 1, &plen);
 
     if (!AppQSPI_IsPresent())
     {
@@ -208,23 +218,23 @@ static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd)
         return pdFALSE;
     }
 
-    if (param == NULL || strcmp(param, "info") == 0)
+    if (param == NULL || PARAM_MATCH(param, plen, "info"))
     {
         AppQSPI_BuildInfo(buf, len);
     }
-    else if (strcmp(param, "mount") == 0)
+    else if (PARAM_MATCH(param, plen, "mount"))
     {
         if (AppQSPI_Mount())
             (void)snprintf(buf, len, "Flash mounted (LittleFS).\r\n");
         else
             (void)snprintf(buf, len, "Mount failed.\r\n");
     }
-    else if (strcmp(param, "umount") == 0)
+    else if (PARAM_MATCH(param, plen, "umount"))
     {
         AppQSPI_Umount();
         (void)snprintf(buf, len, "Flash unmounted.\r\n");
     }
-    else if (strcmp(param, "format") == 0)
+    else if (PARAM_MATCH(param, plen, "format"))
     {
         (void)snprintf(buf, len, "Formatting... ");
         if (AppQSPI_Format())
@@ -232,14 +242,14 @@ static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd)
         else
             (void)snprintf(buf + strlen(buf), len - strlen(buf), "FAILED\r\n");
     }
-    else if (strcmp(param, "ls") == 0)
+    else if (PARAM_MATCH(param, plen, "ls"))
     {
         if (AppQSPI_IsMounted())
             AppQSPI_ListDir(buf, len);
         else
             (void)snprintf(buf, len, "Flash not mounted. Use 'flash mount' first.\r\n");
     }
-    else if (strcmp(param, "cat") == 0)
+    else if (PARAM_MATCH(param, plen, "cat"))
     {
         const char *path = FreeRTOS_CLIGetParameter(cmd, 2, NULL);
         if (path && AppQSPI_IsMounted())
@@ -259,12 +269,13 @@ static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd)
 
 static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
 {
-    const char *sub = FreeRTOS_CLIGetParameter(cmd, 1, NULL);
-    const char *p1  = FreeRTOS_CLIGetParameter(cmd, 2, NULL);
-    const char *p2  = FreeRTOS_CLIGetParameter(cmd, 3, NULL);
+    BaseType_t sublen = 0, p1len = 0, p2len = 0;
+    const char *sub = FreeRTOS_CLIGetParameter(cmd, 1, &sublen);
+    const char *p1  = FreeRTOS_CLIGetParameter(cmd, 2, &p1len);
+    const char *p2  = FreeRTOS_CLIGetParameter(cmd, 3, &p2len);
     float v, x, angle;
 
-    if (sub == NULL || strcmp(sub, "help") == 0)
+    if (sub == NULL || PARAM_MATCH(sub, sublen, "help"))
     {
         (void)snprintf(buf, len,
             "car commands:\r\n"
@@ -278,17 +289,17 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
         return pdFALSE;
     }
 
-    if (strcmp(sub, "stop") == 0)
+    if (PARAM_MATCH(sub, sublen, "stop"))
     {
         Set_Car_Control(0, 0, 0);
         (void)snprintf(buf, len, "Car: stopped.\r\n");
     }
-    else if (strcmp(sub, "start") == 0)
+    else if (PARAM_MATCH(sub, sublen, "start"))
     {
         Set_Car_Start();
         (void)snprintf(buf, len, "Car: resumed.\r\n");
     }
-    else if (strcmp(sub, "status") == 0)
+    else if (PARAM_MATCH(sub, sublen, "status"))
     {
         (void)snprintf(buf, len,
             "--- Car Status ---\r\n"
@@ -301,7 +312,7 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
             (double)car_state.v_angle, (double)car_state.v_angle_target,
             car_state.flag_stop ? "YES" : "NO");
     }
-    else if (strcmp(sub, "speed") == 0)
+    else if (PARAM_MATCH(sub, sublen, "speed"))
     {
         if (p1 == NULL)
         { (void)snprintf(buf, len, "Usage: car speed <mm/s>\r\n"); return pdFALSE; }
@@ -309,7 +320,7 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
         Set_Car_Attitude(v, 0);
         (void)snprintf(buf, len, "Car speed: %.1f mm/s\r\n", (double)v);
     }
-    else if (strcmp(sub, "go") == 0)
+    else if (PARAM_MATCH(sub, sublen, "go"))
     {
         if (p1 == NULL)
         { (void)snprintf(buf, len, "Usage: car go <mm>\r\n"); return pdFALSE; }
@@ -317,7 +328,7 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
         Set_Car_Control(x, 0, 0);
         (void)snprintf(buf, len, "Car: go %.1f mm\r\n", (double)x);
     }
-    else if (strcmp(sub, "spin") == 0)
+    else if (PARAM_MATCH(sub, sublen, "spin"))
     {
         if (p1 == NULL)
         { (void)snprintf(buf, len, "Usage: car spin <deg>\r\n"); return pdFALSE; }
@@ -325,7 +336,7 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
         Set_Car_Control(0, 0, angle);
         (void)snprintf(buf, len, "Car: spin %.1f deg\r\n", (double)angle);
     }
-    else if (strcmp(sub, "arc") == 0)
+    else if (PARAM_MATCH(sub, sublen, "arc"))
     {
         if (p1 == NULL || p2 == NULL)
         { (void)snprintf(buf, len, "Usage: car arc <mm> <deg>\r\n"); return pdFALSE; }
