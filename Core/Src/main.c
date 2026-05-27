@@ -151,10 +151,13 @@ int main(void)
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL); //开启TIM4编码器
   HAL_TIM_Encoder_Start(&htim5, TIM_CHANNEL_ALL); //开启TIM5编码器
 
-  HAL_TIM_Base_Start_IT(&htim2);                  //开启TIM2更新中断
-  HAL_TIM_Base_Start_IT(&htim3);                  //开启TIM3更新中断
-  HAL_TIM_Base_Start_IT(&htim4);                  //开启TIM4更新中断
-  HAL_TIM_Base_Start_IT(&htim5);                  //开启TIM5更新中断
+  /* NOTE: HAL_TIM_Base_Start_IT for TIM2-TIM5 removed.
+   * The encoder MSP (HAL_TIM_Encoder_MspInit) does NOT enable NVIC for
+   * TIM2-TIM5. Without NVIC, update interrupts from these timers never
+   * reach the CPU. The encoder counters are read and reset every 10 ms
+   * in the CarControl task, so overflow is impossible (~21 counts/period).
+   * Only TIM6 (software PWM, NVIC enabled in HAL_TIM_Base_MspInit) needs
+   * the update interrupt. */
   HAL_TIM_Base_Start_IT(&htim6);
 
   //电机初始化 (在时钟配置和 GPIO 之后, 编码器启动之后)
@@ -357,8 +360,8 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* Log assert failure — useful when USE_FULL_ASSERT is enabled for debug builds */
+  (void)printf("ASSERT FAILED: %s:%lu\r\n", (char *)file, (unsigned long)line);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

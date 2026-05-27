@@ -813,6 +813,29 @@ flowchart TD
 | `SCS.c` | 294-314 | `checkHead()` 若 UART 读阻塞则永久挂起（当前 `ftUart_Read` 有 100ms timeout，安全） |
 | `SCSCL.c` | 41 | `SyncWritePos` 使用固定栈缓冲区 `offbuf[32*6]`，若 IDN > 32 栈溢出（实际仅 5 个舵机，安全） |
 
+### Phase 12 (v3.9) — MPU / NVIC / 时钟 / 错误处理审计
+
+**CRITICAL**
+
+| 文件 | 行 | 问题 | 影响 | 修复 |
+|------|-----|------|------|------|
+| `main.c` | 154-157 | `HAL_TIM_Base_Start_IT(&htim2)` 至 `HAL_TIM_Base_Start_IT(&htim5)` 启用编码器定时器更新中断，但 `HAL_TIM_Encoder_MspInit` 和 `HAL_TIM_Base_MspInit` 均未对 TIM2-TIM5 配置 NVIC | 定时器中断在使能后无法送达 CPU → 死中断标志；且代码误导读者以为编码器有溢出中断保护 | 删除 4 行 `Base_Start_IT` 调用，保留注释说明原因 |
+
+**MEDIUM**
+
+| 文件 | 行 | 问题 | 影响 | 修复 |
+|------|-----|------|------|------|
+| `main.c` | 357 | `assert_failed()` 函数体为空 | `USE_FULL_ASSERT` 开启时无法定位断言触发点 | 添加 `printf` 输出文件名和行号 |
+
+**验证通过（无修复）**
+
+| 项 | 说明 |
+|----|------|
+| `configCPU_CLOCK_HZ = SystemCoreClock / 2` | FreeRTOSConfig.h 第 192-193 行重定义。SysTick 时钟源 = HCLK = SYSCLK/2 = 240MHz。与 `SystemClock_Config()` 中 `AHBCLKDivider = DIV2` 一致 ✓ |
+| NVIC 优先级 | 所有使能中断优先级 = 5（等于 `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY`），均可安全调用 FreeRTOS API。TIM7 = 15 (HAL timebase)，PendSV = 15 ✓ |
+| 未使用外设 | ADC/DAC/DCMI/ETH/FDCAN/I2C/SDMMC 未在 CubeMX 中启用，无悬空文件 ✓ |
+| MPU 配置 | Region 0 覆盖 4GB，子区域禁用前 1.5GB + 最后 512MB，仅外部存储器区域 (0x60000000-0xDFFFFFFF) 受保护。CubeMX 默认配置，合理 ✓ |
+
 ### Phase 10 (v3.7) — 代码清理 & 初始化工程改进
 
 **DEAD CODE REMOVAL**
@@ -988,4 +1011,4 @@ Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-24*
+*最后更新: 2026-05-25*
