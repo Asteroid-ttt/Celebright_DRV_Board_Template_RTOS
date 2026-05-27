@@ -813,6 +813,41 @@ flowchart TD
 | `SCS.c` | 294-314 | `checkHead()` 若 UART 读阻塞则永久挂起（当前 `ftUart_Read` 有 100ms timeout，安全） |
 | `SCSCL.c` | 41 | `SyncWritePos` 使用固定栈缓冲区 `offbuf[32*6]`，若 IDN > 32 栈溢出（实际仅 5 个舵机，安全） |
 
+## 13. CubeMX 代码生成规范
+
+### 13.1 USER CODE 区域规则
+
+CubeMX 生成的文件中，**只有** `/* USER CODE BEGIN xxx */` 和 `/* USER CODE END xxx */` 之间的代码在重新生成时保留。区域外的任何修改都会被覆盖。
+
+| 文件 | 可安全修改的区域 | 会被覆盖的区域 |
+|------|----------------|---------------|
+| `main.c` | `Init`, `SysInit`, `2`, `3`, `4`, `6`, `PV`, `PD`, `PFP`, `0` | `Header`, `Includes`, 函数原型声明区 |
+| `freertos.c` | `Includes`, `Variables`, `FunctionPrototypes`, `1`, `2`, `4`, `RTOS_MUTEX`, `RTOS_SEMAPHORES`, `RTOS_TIMERS`, `RTOS_QUEUES`, `RTOS_THREADS`, `RTOS_EVENTS` | `Header`, `Includes` (自动生成的 `#include`), 所有 `osThreadAttr_t` 定义, handler 声明 |
+| `tim.c` | `TIMx_Init 0/1`, `TIMx_MspInit 0/1`, `TIMx_MspDeInit 0/1` | `Header`, 外设初始化结构体, MSP 函数框架 |
+| `gpio.c` | `MX_GPIO_Init 0/1` | `Header`, GPIO 配置结构体 |
+| `usart.c` | `MX_USARTx_UART_Init 0/1`, `HAL_UART_MspInit 0/1` | `Header`, UART 初始化结构体 |
+| `usbd_cdc_if.c` | `INCLUDE`, `PV`, `PRIVATE_FUNCTIONS_DECLARATION`, `PRIVATE_VARIABLES`, `INIT`, `3`, `4`, `5`, `6`, `7`, `13` | `Header`, 函数原型声明区 |
+
+### 13.2 已知的 CubeMX 生成瑕疵（不修改，避免冲突）
+
+| 文件 | 位置 | 问题 | 说明 |
+|------|------|------|------|
+| `freertos.c` | `Includes` | 重复 `#include "FreeRTOS.h"` | CubeMX 自动生成，不在 USER CODE 范围内。FreeRTOS.h 有 include guard， harmless |
+| `main.c` | `Includes` | 自动包含所有启用外设的头文件 | 即使对应模块通过 `APP_ENABLE_*` 禁用，头文件仍会被包含。 harmless |
+
+### 13.3 开发流程（使用 CubeMX）
+
+```mermaid
+flowchart TD
+    A[修改 CubeMX 配置] --> B[重新生成代码]
+    B --> C[检查 git diff]
+    C --> D{USER CODE 外改动?}
+    D -- 是 --> E[恢复手动修改 / 移到 USER CODE 内]
+    D -- 否 --> F[Build & 测试]
+```
+
+> **重要**: 重新生成代码后，**务必**运行 `git diff` 检查是否有 USER CODE 范围外的改动被覆盖。
+
 ### Phase 12 (v3.9) — MPU / NVIC / 时钟 / 错误处理审计
 
 **CRITICAL**
@@ -1011,4 +1046,4 @@ Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-25*
+*最后更新: 2026-05-26*
