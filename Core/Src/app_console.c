@@ -292,9 +292,9 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
             "  car arc <mm> <deg>      Move N mm while turning M deg\r\n"
             "  car stop                Stop immediately\r\n"
             "  car start               Resume after stop\r\n"
-            "  car cruise <mm/s> [deg] Cruise + optional turn, auto-resume\r\n"
-            "  car turn <deg>          Turn N deg, auto-resume cruise\r\n"
-            "  car status              Show current state (yaw/speed)\r\n");
+            "  car cruise <mm/s> [deg/s] Cruise + optional turn rate\r\n"
+            "  car turn <deg>           Turn N deg, auto-resume cruise\r\n"
+            "  car status               Show current state (yaw/speed)\r\n");
         return pdFALSE;
     }
 
@@ -377,31 +377,19 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
     else if (PARAM_MATCH(sub, sublen, "cruise"))
     {
         if (p1 == NULL)
-        { (void)snprintf(buf, len, "Usage: car cruise <mm/s> [deg]\r\n"); return pdFALSE; }
+        { (void)snprintf(buf, len, "Usage: car cruise <mm/s> [deg/s]\r\n"); return pdFALSE; }
         v = (float)atof(p1);
-        g_cruise_speed = v;
-        if (p2 != NULL)
+        angle = (p2 != NULL) ? (float)atof(p2) : 0.0F;
+        g_cruise_speed = (fabsf(v) < 0.5F) ? 0.0F : v;
+        if (g_cruise_speed == 0.0F)
         {
-            angle = (float)atof(p2);
-            if (fabsf(angle) > 1.0F)
-            {
-                /* Turn while cruising: spin first, auto-resume */
-                Set_Car_Control(0, 0, angle);
-                (void)snprintf(buf, len, "Cruise: %.1f mm/s, turn %.1f deg\r\n", (double)v, (double)angle);
-                return pdFALSE;
-            }
-        }
-        if (fabsf(v) < 0.5F)
-        {
-            /* Speed near zero = stop cruise.  Use 'car stop' as alternative. */
-            g_cruise_speed = 0.0F;
             Set_Car_Attitude(0, 0);
             (void)snprintf(buf, len, "Cruise: stopped.\r\n");
         }
         else
         {
-            Set_Car_Attitude(v, 0);
-            (void)snprintf(buf, len, "Cruise: %.1f mm/s\r\n", (double)v);
+            Set_Car_Attitude(v, angle);
+            (void)snprintf(buf, len, "Cruise: %.1f mm/s, %.1f deg/s\r\n", (double)v, (double)angle);
         }
     }
     else if (PARAM_MATCH(sub, sublen, "turn"))
