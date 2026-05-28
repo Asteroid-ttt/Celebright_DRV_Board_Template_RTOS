@@ -279,13 +279,15 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
     {
         (void)snprintf(buf, len,
             "car commands:\r\n"
-            "  car go <mm>          Go straight N mm\r\n"
-            "  car spin <deg>        Spin N degrees\r\n"
-            "  car arc <mm> <deg>    Move N mm while turning M deg\r\n"
-            "  car stop              Stop immediately\r\n"
-            "  car start             Resume after stop\r\n"
-            "  car speed <mm/s>      Set raw speed (0 = stop)\r\n"
-            "  car status            Show current state (yaw/speed)\r\n");
+            "  car go <mm>            Go straight N mm\r\n"
+            "  car spin <deg>          Spin N degrees (pos=CCW, neg=CW)\r\n"
+            "  car spin left <deg>     Spin N degrees left (CCW)\r\n"
+            "  car spin right <deg>    Spin N degrees right (CW)\r\n"
+            "  car arc <mm> <deg>      Move N mm while turning M deg\r\n"
+            "  car stop                Stop immediately\r\n"
+            "  car start               Resume after stop\r\n"
+            "  car speed <mm/s>        Set raw speed (0 = stop)\r\n"
+            "  car status              Show current state (yaw/speed)\r\n");
         return pdFALSE;
     }
 
@@ -330,11 +332,30 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
     }
     else if (PARAM_MATCH(sub, sublen, "spin"))
     {
-        if (p1 == NULL)
-        { (void)snprintf(buf, len, "Usage: car spin <deg>\r\n"); return pdFALSE; }
-        angle = (float)atof(p1);
-        Set_Car_Control(0, 0, angle);
-        (void)snprintf(buf, len, "Car: spin %.1f deg\r\n", (double)angle);
+        if (p1 != NULL && PARAM_MATCH(p1, p1len, "left"))
+        {
+            if (p2 == NULL)
+            { (void)snprintf(buf, len, "Usage: car spin left <deg>\r\n"); return pdFALSE; }
+            angle = fabsf((float)atof(p2));
+            Set_Car_Control(0, 0, angle);
+            (void)snprintf(buf, len, "Car: spin left %.1f deg\r\n", (double)angle);
+        }
+        else if (p1 != NULL && PARAM_MATCH(p1, p1len, "right"))
+        {
+            if (p2 == NULL)
+            { (void)snprintf(buf, len, "Usage: car spin right <deg>\r\n"); return pdFALSE; }
+            angle = -fabsf((float)atof(p2));
+            Set_Car_Control(0, 0, angle);
+            (void)snprintf(buf, len, "Car: spin right %.1f deg\r\n", (double)fabsf(angle));
+        }
+        else
+        {
+            if (p1 == NULL)
+            { (void)snprintf(buf, len, "Usage: car spin <deg>\r\n"); return pdFALSE; }
+            angle = (float)atof(p1);
+            Set_Car_Control(0, 0, angle);
+            (void)snprintf(buf, len, "Car: spin %.1f deg\r\n", (double)angle);
+        }
     }
     else if (PARAM_MATCH(sub, sublen, "arc"))
     {
