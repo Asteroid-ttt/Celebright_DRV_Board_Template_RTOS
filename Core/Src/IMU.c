@@ -276,6 +276,33 @@ void IMU_TT_getgyro(float * zsjganda) {
 void MPU6050_InitAng_Offset(void) {
 	// 初始化角度偏移
 }
+
+size_t IMU_BuildStatus(char *buf, size_t buf_len)
+{
+	size_t used;
+	if ((buf == NULL) || (buf_len == 0U)) return 0U;
+
+	used = (size_t)snprintf(buf, buf_len,
+		"=== IMU Status ===\r\n"
+		"Yaw:     %7.1f deg\r\n"
+		"Pitch:   %7.1f deg\r\n"
+		"Roll:    %7.1f deg\r\n"
+		"Gyro Z:  %7.2f deg/s\r\n"
+		"Accel:   %6.3f %6.3f %6.3f g\r\n"
+		"Gyro:    %7.2f %7.2f %7.2f deg/s\r\n"
+		"Quat:    %7.4f %7.4f %7.4f %7.4f\r\n"
+		"GyroOff: %7.2f %7.2f %7.2f deg/s\r\n"
+		"CalOK:   %s\r\n",
+		(double)ypr[0], (double)ypr[1], (double)ypr[2],
+		(double)imu_g_z,
+		(double)motion6[0], (double)motion6[1], (double)motion6[2],
+		(double)motion6[3], (double)motion6[4], (double)motion6[5],
+		(double)q0, (double)q1, (double)q2, (double)q3,
+		(double)gyro_offset[0], (double)gyro_offset[1], (double)gyro_offset[2],
+		(gyro_offset[0] != 0.0f || gyro_offset[1] != 0.0f || gyro_offset[2] != 0.0f) ? "YES" : "NO");
+
+	return (used < buf_len) ? used : (buf_len - 1U);
+}
 //------------------End of File----------------------------
 
 #endif /* APP_ENABLE_IMU */

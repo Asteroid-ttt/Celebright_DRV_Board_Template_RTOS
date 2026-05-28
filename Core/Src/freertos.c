@@ -404,7 +404,7 @@ void MX_FREERTOS_Init(void) {
 __weak void LedBlink_Handler(void *argument)
 {
   /* init code for USB_DEVICE */
-  //MX_USB_DEVICE_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN LedBlink_Handler */
 #if APP_ENABLE_LEDBLINK
   for(;;)

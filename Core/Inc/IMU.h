@@ -15,9 +15,10 @@ extern float motion6[7];
 extern float imu_g_z;//z轴角速度
 //Mini IMU AHRS �����API
 void IMU_init(void);
-void IMU_getYawPitchRoll(float * ypr); //������̬
+void IMU_getYawPitchRoll(float * ypr); //获取姿态
 void IMU_TT_getgyro(float * zsjganda);
-//uint32_t micros(void);	//��ȡϵͳ�ϵ���ʱ��  ��λ us 
+size_t IMU_BuildStatus(char *buf, size_t buf_len);  /* IMU status for CLI */
+//uint32_t micros(void);	//获取系统上电以来时间  单位 us 
 void MPU6050_InitAng_Offset(void);
 #endif
 

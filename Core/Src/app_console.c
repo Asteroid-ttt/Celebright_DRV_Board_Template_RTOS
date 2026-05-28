@@ -51,6 +51,9 @@ static BaseType_t CLI_RunTimeStatsCommand(char *buf, size_t len, const char *cmd
 static BaseType_t CLI_SysCommand(char *buf, size_t len, const char *cmd);
 static BaseType_t CLI_FlashCommand(char *buf, size_t len, const char *cmd);
 static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd);
+#if APP_ENABLE_IMU
+static BaseType_t CLI_ImuCommand(char *buf, size_t len, const char *cmd);
+#endif
 
 void AppConsole_Init(void)
 {
@@ -148,6 +151,9 @@ static void Console_RegisterCommands(void)
         { "sys",   "sys: System summary (heap/stack)\r\n", CLI_SysCommand,            0 },
         { "flash", "flash [mount|umount|format|ls|cat|info]: QSPI Flash\r\n",  CLI_FlashCommand,  -1 },
         { "car",   "car [go|spin|arc|stop|start|speed|status]: Car motion control\r\n", CLI_CarCommand, -1 },
+#if APP_ENABLE_IMU
+        { "imu",   "imu: Show IMU status (yaw/pitch/roll/accel/gyro/quat)\r\n", CLI_ImuCommand, 0 },
+#endif
     };
 
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++)
@@ -372,5 +378,14 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
     }
     return pdFALSE;
 }
+
+#if APP_ENABLE_IMU
+static BaseType_t CLI_ImuCommand(char *buf, size_t len, const char *cmd)
+{
+    (void)cmd;
+    IMU_BuildStatus(buf, len);
+    return pdFALSE;
+}
+#endif
 
 #endif /* APP_ENABLE_CONSOLE */
