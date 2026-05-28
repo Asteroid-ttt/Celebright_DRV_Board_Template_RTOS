@@ -186,6 +186,7 @@ typedef struct {
 } car_state_t;
 
 extern car_state_t car_state;
+extern float g_cruise_speed;  /* 巡航速度 mm/s, 0=关闭 — 运动完成后自动恢复 */
 
 /* ========================================================================
  * Display Abstraction Layer

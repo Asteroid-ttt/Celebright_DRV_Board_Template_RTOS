@@ -199,7 +199,10 @@ void Car_Control_Update_Output(void){
         }
             
         default:{
-            Set_Car_Attitude(0,0);
+            if (g_cruise_speed != 0.0F)
+                Set_Car_Attitude(g_cruise_speed, 0);
+            else
+                Set_Car_Attitude(0, 0);
             break;
         }
     }

@@ -293,6 +293,9 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
             "  car stop                Stop immediately\r\n"
             "  car start               Resume after stop\r\n"
             "  car speed <mm/s>        Set raw speed (0 = stop)\r\n"
+            "  car cruise <mm/s>       Cruise at constant speed\r\n"
+            "  car cruise stop         Stop cruising\r\n"
+            "  car turn <deg>          Turn N deg, auto-resume cruise\r\n"
             "  car status              Show current state (yaw/speed)\r\n");
         return pdFALSE;
     }
@@ -371,6 +374,32 @@ static BaseType_t CLI_CarCommand(char *buf, size_t len, const char *cmd)
         angle = (float)atof(p2);
         Set_Car_Control(x, 0, angle);
         (void)snprintf(buf, len, "Car: go %.1f mm, spin %.1f deg\r\n", (double)x, (double)angle);
+    }
+    else if (PARAM_MATCH(sub, sublen, "cruise"))
+    {
+        if (p1 == NULL || PARAM_MATCH(p1, p1len, "stop") || PARAM_MATCH(p1, p1len, "off"))
+        {
+            g_cruise_speed = 0.0F;
+            Set_Car_Attitude(0, 0);
+            (void)snprintf(buf, len, "Cruise: stopped.\r\n");
+        }
+        else
+        {
+            v = (float)atof(p1);
+            g_cruise_speed = v;
+            Set_Car_Attitude(v, 0);
+            (void)snprintf(buf, len, "Cruise: %.1f mm/s\r\n", (double)v);
+        }
+    }
+    else if (PARAM_MATCH(sub, sublen, "turn"))
+    {
+        if (p1 == NULL)
+        { (void)snprintf(buf, len, "Usage: car turn <deg>\r\n"); return pdFALSE; }
+        angle = (float)atof(p1);
+        /* Save current speed for auto-resume after turn completes */
+        g_cruise_speed = car_state.v_line_target;
+        Set_Car_Control(0, 0, angle);
+        (void)snprintf(buf, len, "Car: turn %.1f deg (cruise %.1f mm/s)\r\n", (double)angle, (double)g_cruise_speed);
     }
     else
     {
