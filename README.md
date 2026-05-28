@@ -473,14 +473,17 @@ stateDiagram-v2
 | `stats` | — | 运行时 CPU 占用统计 | `vTaskGetRunTimeStats()` |
 | `sys` | — | 系统摘要 (堆剩余、任务栈水位) | `AppSysMon_*` |
 | `flash` | `mount\|umount\|format\|ls\|cat\|info` | QSPI Flash + LittleFS 管理 | `AppQSPI_*` |
+| `imu` | — | IMU 姿态/加速度/陀螺仪/四元数 | `IMU_BuildStatus()` |
 
 ### 7.2 小车控制命令
 
 | 命令 | 参数 | 功能 | API 调用 |
 |------|------|------|----------|
 | `car` | (无参) | 显示帮助 | — |
-| `car go <mm>` | 距离 (mm) | 直行 N 毫米 | `Set_Car_Control(mm, 0, 0)` |
-| `car spin <deg>` | 角度 (°) | 原地旋转 N 度 | `Set_Car_Control(0, 0, deg)` |
+| `car go <mm>` | 距离 (mm) | 直行 N 毫米 (负数后退) | `Set_Car_Control(mm, 0, 0)` |
+| `car spin <deg>` | 角度 (°) | 原地旋转 N 度 (正=CCW, 负=CW) | `Set_Car_Control(0, 0, deg)` |
+| `car spin left <deg>` | 角度 (°) | 显式左转/逆时针 N 度 | `Set_Car_Control(0, 0, +deg)` |
+| `car spin right <deg>` | 角度 (°) | 显式右转/顺时针 N 度 | `Set_Car_Control(0, 0, -deg)` |
 | `car arc <mm> <deg>` | 距离 + 角度 | 弧线运动 | `Set_Car_Control(mm, 0, deg)` |
 | `car stop` | — | 立即停止 | `Set_Car_Control(0, 0, 0)` |
 | `car start` | — | 恢复运动 | `Set_Car_Start()` |
@@ -496,7 +499,8 @@ tasks: List all tasks
 stats: Runtime CPU stats
 sys: System summary (heap/stack)
 flash [mount|umount|format|ls|cat|info]: QSPI Flash
-car [go|spin|arc|stop|start|speed|status]: Car motion control
+imu: Show IMU status (yaw/pitch/roll/accel/gyro/quat)
+car [go|spin|spin left|spin right|arc|stop|start|speed|status]: Car motion control
 > 
 > car status
 --- Car Status ---
@@ -508,9 +512,23 @@ Stop:  YES
 > car go 500
 Car: go 500.0 mm
 > 
-> car spin 90
-Car: spin 90.0 deg
+> car spin left 90
+Car: spin left 90.0 deg
 >
+> car spin right 45
+Car: spin right 45.0 deg
+>
+> imu
+=== IMU Status ===
+Yaw:      45.1 deg
+Pitch:     1.2 deg
+Roll:     -0.3 deg
+Gyro Z:   0.12 deg/s
+Accel:   0.005 -0.012 1.001 g
+Gyro:     0.10 -0.05  0.12 deg/s
+Quat:     0.9239 0.0000 0.0000 0.3827
+GyroOff:  0.10 -0.05  0.08 deg/s
+CalOK:    YES
 ```
 
 ---
@@ -790,6 +808,31 @@ flowchart TD
 | `SCSLib` | - | 第三方 SCSCL 舵机协议库设计为单线程：全局 `wBuf[128]`/`Mem[]`/`Level`/`End`/`u8Status`/`u8Error` 被所有 FreeRTOS 任务共享 | 确保仅一个任务调用 SCS 函数，或在上层实施互斥锁 |
 | `roboticArm.c` | 34 | `ReadPos(1)` 返回值未校验（舵机未连接时返回 -1 → 解包为垃圾值 → 错误侧判断） | 添加 `if (init_Pos_1 < 0) goto error;` |
 
+### Phase 13 (v4.0) — 运行时 bug 修复 & 功能增强
+
+**BUG FIX (运行时致命)**
+
+| 文件 | 行 | 问题 | 修复 |
+|------|-----|------|------|
+| `app_console.c` | 262-341 | `FreeRTOS_CLIGetParameter()` 返回非 null-terminated 子串 → `strcmp()` 对所有带参命令失效 | 添加 `PARAM_MATCH()` 宏使用 `strncmp` + 参数长度 |
+| `car_control.c` | 66 | `target_line_distance = x/2` → `car go 1000` 实际只走 500mm | `x/2` → `x`；反馈 (`0.5×sum`) 已含 1/2 因子 |
+| `platform_config.h` | 20 | `ENC_EVERY_CIRCLE = 1061.268` 不匹配 GMR 500线+1:28 硬件；PID 误认为速度偏快 53× → motor 几乎不转 | 改为显式公式 `500×4×28 = 56,000`；CubeMX 需同步改 1x→4x |
+
+**FEATURE (新功能)**
+
+| 文件 | 命令 | 说明 |
+|------|------|------|
+| `app_console.c` | `car spin left <deg>` | 显式左转/逆时针 |
+| `app_console.c` | `car spin right <deg>` | 显式右转/顺时针 |
+| `IMU.c` / `IMU.h` / `app_console.c` | `imu` | IMU 姿态/加速度/陀螺仪/四元数/零偏状态实时查询 |
+
+**HARDWARE CONFIG (用户需在 CubeMX 中手动操作)**
+
+| 外设 | 参数 | 当前值 | 改为 |
+|------|------|--------|------|
+| TIM2~5 | Encoder Mode | TI1 (1×) | **TI1 and TI2** (4×) |
+| TIM2~5 | IC1/IC2 Polarity | Rising Edge | **Rising and Falling Edge** |
+
 ### Phase 11 (v3.8) — SCSLib / LittleFS / 机械臂接口审计
 
 **CRITICAL**
@@ -1046,4 +1089,4 @@ Copyright (c) 2023-2026 Celebright Team. Licensed under GPL v3.
 
 ---
 
-*最后更新: 2026-05-26*
+*最后更新: 2026-05-30*
